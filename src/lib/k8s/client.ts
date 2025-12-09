@@ -12,6 +12,21 @@ if (process.env.KUBECONFIG) {
   kc.loadFromFile(process.env.KUBECONFIG);
 }
 
+const currentCluster = kc.getCurrentCluster();
+
+// Patch to skip TLS verification for HTTP clusters (not recommended for production)
+if (currentCluster && currentCluster.server.startsWith('http:')) {
+  const clusterIndex = kc.clusters.findIndex(c => c.name === currentCluster.name);
+
+  if (clusterIndex > -1) {
+    kc.clusters[clusterIndex] = {
+      ...kc.clusters[clusterIndex],
+      skipTLSVerify: true,
+    };
+    console.log('🔓 Insecure HTTP connection detected: Enabled skipTLSVerify via clean config patch');
+  }
+}
+
 // Export specialized APIs
 export const coreV1Api = kc.makeApiClient(k8s.CoreV1Api);
 export const appsV1Api = kc.makeApiClient(k8s.AppsV1Api);
