@@ -101,17 +101,22 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
         const stsObj = builders.createStatefulSetObject(req.name, secretName, req.version, strategy);
         await appsV1Api.createNamespacedStatefulSet({ namespace: config.NAMESPACE, body: stsObj });
 
-        // 4. Create Backup CronJob (Only for Postgres currently)
-        if (req.type === 'postgres') {
-            const schedule = req.backupSchedule || '0 3 * * *'; // Default 3 AM
-            const cronObj = builders.createBackupCronJobObject(
-                req.name,
-                schedule,
-                secretName,
-                internalDbName,
-                req.version
-            );
+        // 4. Create Backup CronJob 
+        const schedule = req.backupSchedule || '0 3 * * *'; // Default 3 AM
+        const cronObj = builders.createBackupCronJobObject(
+            req.name,
+            schedule,
+            secretName,
+            internalDbName,
+            req.version,
+            strategy
+        );
+
+        if (cronObj) {
+            console.log(`Scheduling Backup Job for ${req.name}`);
             await batchV1Api.createNamespacedCronJob({ namespace: config.NAMESPACE, body: cronObj });
+        } else {
+            console.log(`Skipping Backup Schedule for ${req.name} (not supported by strategy)`);
         }
 
         return {

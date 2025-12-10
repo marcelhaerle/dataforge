@@ -137,35 +137,22 @@ export function createCredentialsSecretObject(
 
 /**
  * Creates a CronJob for automated S3 backups.
- * Currently tailored for PostgreSQL using pg_dump.
  */
 export function createBackupCronJobObject(
     name: string,
     schedule: string,
     dbSecretName: string,
     dbName: string,
-    dbVersion: string
-): k8s.V1CronJob {
-    const jobName = `${name}-backup`;
+    dbVersion: string,
+    strategy: DatabaseStrategy
+): k8s.V1CronJob | null {
+    const backupConfig = strategy.getBackupConfig(name, dbSecretName, dbName, dbVersion);
 
-    // The Backup Pipeline:
-    // 1. Install AWS CLI (on Alpine)
-    // 2. Set S3 Env vars
-    // 3. Run pg_dump
-    // 4. Pipe output to AWS CLI -> S3
-    // 'set -o pipefail' ensures the job fails if pg_dump fails, preventing empty backups.
-    const cmd = [
-        '/bin/sh',
-        '-c',
-        `set -o pipefail && \
-    apk add --no-cache aws-cli && \
-    export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY && \
-    export AWS_SECRET_ACCESS_KEY=$S3_SECRET_KEY && \
-    export AWS_DEFAULT_REGION=$S3_REGION && \
-    pg_dump -h ${name}-service -U $DB_USER $DB_NAME \
-    | aws s3 cp - s3://$S3_BUCKET/$DB_NAME/backup_$(date +%Y-%m-%d_%H-%M-%S).sql \
-    --endpoint-url $S3_ENDPOINT`,
-    ];
+    if (!backupConfig) {
+        return null;
+    }
+
+    const jobName = `${name}-backup`;
 
     return {
         apiVersion: 'batch/v1',
@@ -189,25 +176,10 @@ export function createBackupCronJobObject(
                             containers: [
                                 {
                                     name: 'backup-worker',
-                                    image: `postgres:${dbVersion}-alpine`,
-                                    command: cmd,
+                                    image: backupConfig.image,
+                                    command: backupConfig.command,
                                     env: [
-                                        // --- DB Credentials ---
-                                        {
-                                            name: 'DB_USER',
-                                            valueFrom: {
-                                                secretKeyRef: { name: dbSecretName, key: 'username' },
-                                            },
-                                        },
-                                        {
-                                            name: 'PGPASSWORD', // Standard env var for pg_dump
-                                            valueFrom: {
-                                                secretKeyRef: { name: dbSecretName, key: 'password' },
-                                            },
-                                        },
-                                        // Explicitly set DB name in case it differs from secret
-                                        { name: 'DB_NAME', value: dbName },
-
+                                        ...backupConfig.env,
                                         // --- S3 Credentials (Global Secret) ---
                                         {
                                             name: 'S3_ACCESS_KEY',

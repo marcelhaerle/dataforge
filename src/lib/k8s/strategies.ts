@@ -36,6 +36,13 @@ export interface DatabaseStrategy {
      * Ensures K8s knows when the DB is truly ready.
      */
     getReadinessProbe(): V1Probe;
+
+    /** Config for backup jobs. */
+    getBackupConfig(name: string, secretName: string, dbName: string, version: string): {
+        image: string;
+        command: string[];
+        env: V1EnvVar[];
+    } | null;
 }
 
 /**
@@ -106,6 +113,38 @@ export class PostgresStrategy implements DatabaseStrategy {
             initialDelaySeconds: 5,
             periodSeconds: 10,
             failureThreshold: 3
+        };
+    }
+
+    getBackupConfig(name: string, secretName: string, dbName: string, version: string) {
+        // Die pg_dump Pipeline -> S3
+        const cmd = [
+            '/bin/sh',
+            '-c',
+            `set -o pipefail && \
+            apk add --no-cache aws-cli && \
+            export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY && \
+            export AWS_SECRET_ACCESS_KEY=$S3_SECRET_KEY && \
+            export AWS_DEFAULT_REGION=$S3_REGION && \
+            pg_dump -h ${name}-service -U $DB_USER $DB_NAME \
+            | aws s3 cp - s3://$S3_BUCKET/$DB_NAME/backup_$(date +%Y-%m-%d_%H-%M-%S).sql \
+            --endpoint-url $S3_ENDPOINT`
+        ];
+
+        return {
+            image: this.getImageName(version),
+            command: cmd,
+            env: [
+                {
+                    name: 'DB_USER',
+                    valueFrom: { secretKeyRef: { name: secretName, key: 'username' } }
+                },
+                {
+                    name: 'PGPASSWORD',
+                    valueFrom: { secretKeyRef: { name: secretName, key: 'password' } }
+                },
+                { name: 'DB_NAME', value: dbName }
+            ]
         };
     }
 }
