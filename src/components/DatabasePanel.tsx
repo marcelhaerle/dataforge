@@ -85,6 +85,17 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
             <span className="font-mono text-slate-700">{db.username || '-'}</span>
           </div>
           <div>
+            <span className="text-slate-400 block text-xs">Password</span>
+            <span className="font-mono text-slate-700">*********</span>
+            <button
+              onClick={() => copyToClipboard(db.password || '')}
+              className="ml-5 p-1.5 bg-slate-200 rounded hover:bg-slate-500 text-slate-600 hover:text-slate-100 transition-colors"
+              title="Copy"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
+          <div>
             <span className="text-slate-400 block text-xs">Datbase</span>
             <span className="font-mono text-slate-700">{db.internalDbName}</span>
           </div>
