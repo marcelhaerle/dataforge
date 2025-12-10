@@ -25,6 +25,7 @@ export interface DatabaseInstance {
     internalDbName?: string;
     ip?: string;
     port?: number;
+    backupSchedule: string;
 }
 
 /**
@@ -71,7 +72,7 @@ async function rollbackCreation(name: string, secretName: string) {
 /**
  * Orchestrates the creation of a database.
  */
-export async function createDatabase(req: CreateDatabaseRequest) {
+export async function createDatabase(req: CreateDatabaseRequest): Promise<DatabaseInstance> {
     console.log(`Creating database ${req.name} (${req.type})...`);
 
     const strategy = getStrategy(req.type);
@@ -113,7 +114,15 @@ export async function createDatabase(req: CreateDatabaseRequest) {
             await batchV1Api.createNamespacedCronJob({ namespace: config.NAMESPACE, body: cronObj });
         }
 
-        return { status: 'success', name: req.name };
+        return {
+            name: req.name,
+            type: req.type,
+            status: 'Pending',
+            username,
+            password,
+            internalDbName,
+            backupSchedule: req.backupSchedule || '0 3 * * *'
+        };
 
     } catch (err: any) {
         // Check for K8s Conflict (409)
@@ -158,6 +167,8 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
                 port: undefined as number | undefined
             };
 
+            let backupSchedule = '';
+
             try {
                 // Fetch Secret to get credentials
                 const secret = await coreV1Api.readNamespacedSecret({ name: `${name}-secret`, namespace: config.NAMESPACE });
@@ -167,6 +178,7 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
                 connectionInfo.username = Buffer.from(data.username || '', 'base64').toString();
                 connectionInfo.password = Buffer.from(data.password || '', 'base64').toString();
                 connectionInfo.dbName = Buffer.from(data.db_name || '', 'base64').toString();
+                backupSchedule = Buffer.from(data.backup_schedule || '', 'base64').toString();
 
                 // Fetch Service to get IP
                 const svc = await coreV1Api.readNamespacedService({ name: `${name}-service`, namespace: config.NAMESPACE });
@@ -189,7 +201,8 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
                 password: connectionInfo.password, // Be careful exposing this!
                 internalDbName: connectionInfo.dbName,
                 ip: connectionInfo.ip,
-                port: connectionInfo.port
+                port: connectionInfo.port,
+                backupSchedule,
             });
         }
 
