@@ -18,7 +18,7 @@ export interface CreateDatabaseRequest {
 
 export interface DatabaseInstance {
     name: string;
-    type: string;
+    type: 'postgres' | 'redis';
     status: 'Running' | 'Pending' | 'Error';
     connectionString?: string;
     username?: string;
@@ -144,7 +144,7 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
 
         for (const sts of stsList.items) {
             const name = sts.metadata?.labels?.app || 'unknown';
-            const type = sts.metadata?.labels?.['dataforge.db/type'] || 'postgres';
+            const type = (sts.metadata?.labels?.['dataforge.db/type'] || 'postgres') as 'postgres' | 'redis';
 
             // Basic Status Check
             const readyReplicas = sts.status?.readyReplicas || 0;
