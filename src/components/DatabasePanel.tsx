@@ -100,6 +100,10 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
             <span className="font-mono text-slate-700">{db.internalDbName}</span>
           </div>
           <div>
+            <span className="text-slate-400 block text-xs">Backup Schedule</span>
+            <span className="font-mono text-slate-700">{db.backupSchedule}</span>
+          </div>
+          <div>
             <span className="text-slate-400 block text-xs">Host Port</span>
             <span className="font-mono text-slate-700">{db.port || '-'}</span>
           </div>
