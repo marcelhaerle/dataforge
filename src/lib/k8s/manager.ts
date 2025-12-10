@@ -20,7 +20,6 @@ export interface DatabaseInstance {
     name: string;
     type: 'postgres' | 'redis';
     status: 'Running' | 'Pending' | 'Error';
-    connectionString?: string;
     username?: string;
     password?: string;
     internalDbName?: string;
@@ -182,19 +181,10 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
                 console.warn(`Could not fetch details for ${name}, maybe deleting?`);
             }
 
-            // Build Connection String
-            let connString = '';
-            if (connectionInfo.ip && type === 'postgres') {
-                connString = `postgresql://${connectionInfo.username}:${connectionInfo.password}@${connectionInfo.ip}:${connectionInfo.port}/${connectionInfo.dbName}`;
-            } else {
-                connString = 'Pending IP assignment...';
-            }
-
             databases.push({
                 name,
                 type,
                 status: isReady ? 'Running' : 'Pending',
-                connectionString: connString,
                 username: connectionInfo.username,
                 password: connectionInfo.password, // Be careful exposing this!
                 internalDbName: connectionInfo.dbName,
