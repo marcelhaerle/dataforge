@@ -1,9 +1,10 @@
 'use client';
 
 import { DatabaseInstance } from "@/lib/k8s/manager";
-import { Copy, Trash2 } from "lucide-react";
+import { Copy, Download, Loader2, Trash2 } from "lucide-react";
 import DBIcon from "./DBIcon";
 import StatusBadge from "./StatusBadge";
+import { useState } from "react";
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
@@ -16,6 +17,7 @@ interface DatabasePanelProps {
 }
 
 export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const getMaskedConnectionString = (db: DatabaseInstance) => {
     if (!db.ip) return "Waiting for IP...";
@@ -41,6 +43,12 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
     let database = db.internalDbName || 'defaultdb';
 
     return `${protocol}://${user}:${password}@${host}:${port}/${database}`;
+  };
+
+  const handleDownload = () => {
+    setIsDownloading(true);
+    window.location.href = `/api/databases/${db.name}/dump`;
+    setTimeout(() => setIsDownloading(false), 5000);
   };
 
   return (
@@ -116,6 +124,15 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
 
       {/* Card Footer */}
       <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+        <button
+          onClick={handleDownload}
+          disabled={db.status !== 'Running' || isDownloading}
+          className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Download Database Dump"
+        >
+          {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          Dump
+        </button>
         <button
           onClick={() => onDelete(db.name)}
           className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm"

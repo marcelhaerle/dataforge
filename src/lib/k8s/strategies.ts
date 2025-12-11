@@ -61,6 +61,12 @@ export interface DatabaseStrategy {
      * Create the password used for DB access.
      */
     createPassword(): string;
+
+    /**
+     * Command to create a dump of the database.
+     * Used for export functionality.
+     */
+    createDumpCommand(): string[];
 }
 
 /**
@@ -178,6 +184,14 @@ export class PostgresStrategy implements DatabaseStrategy {
     createPassword(): string {
         return generatePassword();
     }
+
+    createDumpCommand(): string[] {
+        return [
+            '/bin/sh',
+            '-c',
+            `pg_dump -h localhost -U $DB_USER $DB_NAME`
+        ];
+    }
 }
 
 export class RedisStrategy implements DatabaseStrategy {
@@ -235,5 +249,13 @@ export class RedisStrategy implements DatabaseStrategy {
 
     createPassword(): string {
         return generatePassword();
+    }
+
+    createDumpCommand(): string[] {
+        return [
+            '/bin/sh',
+            '-c',
+            `redis-cli -h localhost -a $REDIS_PASSWORD --rdb -`
+        ];
     }
 }

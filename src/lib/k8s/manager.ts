@@ -1,11 +1,13 @@
 import {
     appsV1Api,
     coreV1Api,
-    batchV1Api
+    batchV1Api,
+    exec
 } from './client';
 import * as builders from './builder';
 import { PostgresStrategy, RedisStrategy, DatabaseStrategy } from './strategies';
 import { config } from '@/lib/config';
+import { PassThrough } from 'stream';
 
 export interface CreateDatabaseRequest {
     name: string;
@@ -226,8 +228,7 @@ export async function deleteDatabase(name: string) {
             name: `${name}-statefulset`,
             namespace: config.NAMESPACE,
             body: { propagationPolicy: 'Foreground' }
-        }
-        );
+        });
 
         await coreV1Api.deleteNamespacedService({ name: `${name}-service`, namespace: config.NAMESPACE });
         await coreV1Api.deleteNamespacedSecret({ name: `${name}-secret`, namespace: config.NAMESPACE });
@@ -248,5 +249,62 @@ export async function deleteDatabase(name: string) {
             throw new Error('Database not found');
         }
         throw e;
+    }
+}
+
+export async function getDatabaseDetails(name: string): Promise<DatabaseInstance> {
+    const databases = await listDatabases();
+    const db = databases.find(d => d.name === name);
+    if (!db) {
+        throw new Error('Database not found');
+    }
+    return db;
+}
+
+export async function getDatabaseDumpStream(name: string): Promise<ReadableStream> {
+    const podName = `${name}-statefulset-0`;
+
+    const sts = await appsV1Api.readNamespacedStatefulSet({ name: `${name}-statefulset`, namespace: config.NAMESPACE });
+    const type = sts.metadata?.labels?.['dataforge.db/type'];
+
+    if (!type) {
+        throw new Error('Could not determine database type for dump');
+    }
+
+    const strategy = getStrategy(type);
+    const cmd = strategy.createDumpCommand();
+
+    const passthrough = new PassThrough();
+
+    try {
+        console.log(`Starting dump stream for ${name}...`);
+
+        await exec.exec(
+            config.NAMESPACE,
+            podName,
+            'database',
+            cmd,
+            passthrough,
+            process.stderr as any,
+            null,
+            false,
+            (status) => {
+                if (status.status === 'Failure') {
+                    console.error('Dump failed:', status.message);
+                    passthrough.end(); // Stop stream on failure
+                }
+            }
+        );
+
+        return new ReadableStream({
+            start(controller) {
+                passthrough.on('data', (chunk) => controller.enqueue(chunk));
+                passthrough.on('end', () => controller.close());
+                passthrough.on('error', (err) => controller.error(err));
+            }
+        });
+    } catch (e) {
+        console.error('Error executing dump:', e);
+        throw new Error('Failed to start database dump');
     }
 }
