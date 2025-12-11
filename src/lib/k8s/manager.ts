@@ -388,7 +388,10 @@ export async function triggerBackup(name: string) {
                     'dataforge.db/type': 'manual-backup'
                 }
             },
-            spec: cronJob.spec.jobTemplate.spec
+            spec: {
+                ...cronJob.spec.jobTemplate.spec,
+                ttlSecondsAfterFinished: 300 // Clean up manual jobs faster (5 mins)
+            }
         };
 
         console.log(`Triggering manual backup for ${name} (Job: ${manualJobName})`);
