@@ -39,7 +39,7 @@ export default function Dashboard() {
 
     try {
       await fetch(`/api/databases/${name}`, { method: 'DELETE' });
-      fetchDatabases();
+      setDatabases(databases.filter(db => db.name !== name));
     } catch (error) {
       alert("Konnte nicht löschen");
     }
