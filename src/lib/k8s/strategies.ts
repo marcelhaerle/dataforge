@@ -43,6 +43,13 @@ export interface DatabaseStrategy {
         command: string[];
         env: V1EnvVar[];
     } | null;
+
+    /**
+     * Create the internal database name if needed.
+     * @param dbName the requested database name
+     * @return the internal database name
+     */
+    getInternalDbName(dbName: string): string;
 }
 
 /**
@@ -146,5 +153,10 @@ export class PostgresStrategy implements DatabaseStrategy {
                 { name: 'DB_NAME', value: dbName }
             ]
         };
+    }
+
+    getInternalDbName(dbName: string): string {
+        // Postgres doesn't like dashes in DB names
+        return dbName.replace(/-/g, '_');
     }
 }

@@ -78,8 +78,7 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
     const strategy = getStrategy(req.type);
     const password = generatePassword();
     const username = `user_${generatePassword(6)}`;
-    // Normalize DB name (Postgres doesn't like dashes in SQL names)
-    const internalDbName = req.dbName || req.name.replace(/-/g, '_');
+    const internalDbName = strategy.getInternalDbName(req.dbName || req.name);
     const secretName = `${req.name}-secret`;
 
     try {
