@@ -1,4 +1,5 @@
 import { V1EnvVar, V1VolumeMount, V1Probe } from '@kubernetes/client-node';
+import { generatePassword } from '../utils';
 
 /**
  * Interface for database strategies.
@@ -50,6 +51,11 @@ export interface DatabaseStrategy {
      * @return the internal database name
      */
     getInternalDbName(dbName: string): string;
+
+    /**
+     * Create the username used for DB access.
+     */
+    createUsername(): string;
 }
 
 /**
@@ -158,5 +164,9 @@ export class PostgresStrategy implements DatabaseStrategy {
     getInternalDbName(dbName: string): string {
         // Postgres doesn't like dashes in DB names
         return dbName.replace(/-/g, '_');
+    }
+
+    createUsername(): string {
+        return `user_${generatePassword(6)}`;
     }
 }

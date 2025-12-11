@@ -6,7 +6,7 @@ import {
 import * as builders from './builder';
 import { PostgresStrategy, DatabaseStrategy } from './strategies';
 import { config } from '@/lib/config';
-import crypto from 'crypto';
+import { generatePassword } from '../utils';
 
 export interface CreateDatabaseRequest {
     name: string;
@@ -26,16 +26,6 @@ export interface DatabaseInstance {
     ip?: string;
     port?: number;
     backupSchedule: string;
-}
-
-/**
- * Helper to generate secure random passwords.
- */
-function generatePassword(length = 16): string {
-    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return Array.from(crypto.randomFillSync(new Uint8Array(length)))
-        .map((x) => charset[x % charset.length])
-        .join('');
 }
 
 /**
@@ -77,7 +67,7 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
 
     const strategy = getStrategy(req.type);
     const password = generatePassword();
-    const username = `user_${generatePassword(6)}`;
+    const username = strategy.createUsername();
     const internalDbName = strategy.getInternalDbName(req.dbName || req.name);
     const secretName = `${req.name}-secret`;
 
