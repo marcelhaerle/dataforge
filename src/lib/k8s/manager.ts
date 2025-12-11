@@ -6,7 +6,6 @@ import {
 import * as builders from './builder';
 import { PostgresStrategy, DatabaseStrategy } from './strategies';
 import { config } from '@/lib/config';
-import { generatePassword } from '../utils';
 
 export interface CreateDatabaseRequest {
     name: string;
@@ -66,7 +65,7 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
     console.log(`Creating database ${req.name} (${req.type})...`);
 
     const strategy = getStrategy(req.type);
-    const password = generatePassword();
+    const password = strategy.createPassword();
     const username = strategy.createUsername();
     const internalDbName = strategy.getInternalDbName(req.dbName || req.name);
     const secretName = `${req.name}-secret`;

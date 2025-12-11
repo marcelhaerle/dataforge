@@ -56,6 +56,11 @@ export interface DatabaseStrategy {
      * Create the username used for DB access.
      */
     createUsername(): string;
+
+    /**
+     * Create the password used for DB access.
+     */
+    createPassword(): string;
 }
 
 /**
@@ -168,5 +173,9 @@ export class PostgresStrategy implements DatabaseStrategy {
 
     createUsername(): string {
         return `user_${generatePassword(6)}`;
+    }
+
+    createPassword(): string {
+        return generatePassword();
     }
 }
