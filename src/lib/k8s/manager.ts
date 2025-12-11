@@ -64,6 +64,56 @@ async function rollbackCreation(name: string, secretName: string) {
 }
 
 /**
+ * Ensures that the global S3 secret exists in the cluster.
+ * Syncs values from .env (via config object) to the K8s Secret.
+ */
+async function ensureGlobalS3Secret() {
+    const secretName = 'dataforge-s3-credentials';
+    const secretData = {
+        'access-key': config.S3_ACCESS_KEY,
+        'secret-key': config.S3_SECRET_KEY,
+        'endpoint': config.S3_ENDPOINT,
+        'bucket': config.S3_BUCKET,
+        'region': config.S3_REGION,
+    };
+
+    try {
+        // Try to create it first
+        await coreV1Api.createNamespacedSecret({
+            namespace: config.NAMESPACE,
+            body: {
+                apiVersion: 'v1',
+                kind: 'Secret',
+                metadata: {
+                    name: secretName,
+                    labels: { 'managed-by': 'dataforge' }
+                },
+                stringData: secretData
+            }
+        });
+        console.log(`Created global S3 secret: ${secretName}`);
+    } catch (e: any) {
+        if (e.body?.code === 409) {
+            // Already exists -> Update it (in case .env changed)
+            try {
+                await coreV1Api.patchNamespacedSecret({
+                    name: secretName,
+                    namespace: config.NAMESPACE,
+                    body: { stringData: secretData }
+                });
+                console.log(`Updated global S3 secret: ${secretName}`);
+            } catch (patchError) {
+                console.warn(`Failed to patch S3 secret:`, patchError);
+            }
+        } else {
+            console.error(`Failed to ensure S3 secret:`, e);
+            // Don't throw here, maybe it exists and we just lack permissions?
+            // But usually this is critical.
+        }
+    }
+}
+
+/**
  * Orchestrates the creation of a database.
  */
 export async function createDatabase(req: CreateDatabaseRequest): Promise<DatabaseInstance> {
@@ -76,6 +126,9 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
     const secretName = `${req.name}-secret`;
 
     try {
+        // 0. Ensure S3 Secret exists (Critical for Backups)
+        await ensureGlobalS3Secret();
+
         // 1. Create Secret
         const secretObj = builders.createCredentialsSecretObject(secretName, {
             username,
@@ -315,6 +368,8 @@ export async function triggerBackup(name: string) {
     const manualJobName = `${name}-manual-backup-${Date.now()}`;
 
     try {
+        await ensureGlobalS3Secret();
+
         const cronJob = await batchV1Api.readNamespacedCronJob({ name: cronJobName, namespace: config.NAMESPACE });
 
         if (!cronJob.spec?.jobTemplate.spec) {
