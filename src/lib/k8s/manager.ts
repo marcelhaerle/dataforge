@@ -8,6 +8,7 @@ import * as builders from './builder';
 import { PostgresStrategy, RedisStrategy, DatabaseStrategy } from './strategies';
 import { config } from '@/lib/config';
 import { PassThrough } from 'stream';
+import { V1Job } from '@kubernetes/client-node';
 
 export interface CreateDatabaseRequest {
     name: string;
@@ -306,5 +307,44 @@ export async function getDatabaseDumpStream(name: string): Promise<ReadableStrea
     } catch (e) {
         console.error('Error executing dump:', e);
         throw new Error('Failed to start database dump');
+    }
+}
+
+export async function triggerBackup(name: string) {
+    const cronJobName = `${name}-backup`;
+    const manualJobName = `${name}-manual-backup-${Date.now()}`;
+
+    try {
+        const cronJob = await batchV1Api.readNamespacedCronJob({ name: cronJobName, namespace: config.NAMESPACE });
+
+        if (!cronJob.spec?.jobTemplate.spec) {
+            throw new Error('CronJob invalid or has no spec');
+        }
+
+        const job: V1Job = {
+            apiVersion: 'batch/v1',
+            kind: 'Job',
+            metadata: {
+                name: manualJobName,
+                namespace: config.NAMESPACE,
+                labels: {
+                    'app': name,
+                    'managed-by': 'dataforge',
+                    'dataforge.db/type': 'manual-backup'
+                }
+            },
+            spec: cronJob.spec.jobTemplate.spec
+        };
+
+        console.log(`Triggering manual backup for ${name} (Job: ${manualJobName})`);
+        await batchV1Api.createNamespacedJob({ namespace: config.NAMESPACE, body: job });
+
+        return { jobName: manualJobName };
+    } catch (e: any) {
+        if (e.body?.code === 404) {
+            throw new Error('Backup configuration not found');
+        }
+        console.error(`Failed to trigger backup for ${name}:`, e);
+        throw new Error('Failed to trigger backup');
     }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { DatabaseInstance } from "@/lib/k8s/manager";
-import { Copy, Download, Loader2, Trash2 } from "lucide-react";
+import { CloudUpload, Copy, Download, Loader2, Trash2 } from "lucide-react";
 import DBIcon from "./DBIcon";
 import StatusBadge from "./StatusBadge";
 import { useState } from "react";
@@ -18,6 +18,7 @@ interface DatabasePanelProps {
 
 export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isBackupTriggering, setIsBackupTriggering] = useState(false);
 
   const getMaskedConnectionString = (db: DatabaseInstance) => {
     if (!db.ip) return "Waiting for IP...";
@@ -49,6 +50,23 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
     setIsDownloading(true);
     window.location.href = `/api/databases/${db.name}/dump`;
     setTimeout(() => setIsDownloading(false), 5000);
+  };
+
+  const handleS3Backup = async () => {
+    setIsBackupTriggering(true);
+    try {
+      const res = await fetch(`/api/databases/${db.name}/backup`, { method: 'POST' });
+      if (res.ok) {
+        alert("Backup job started! Check S3 in a few minutes.");
+      } else {
+        const err = await res.json();
+        alert(`Error: ${err.error}`);
+      }
+    } catch (e) {
+      alert("Could not start backup.");
+    } finally {
+      setIsBackupTriggering(false);
+    }
   };
 
   return (
@@ -132,6 +150,15 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
         >
           {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           Dump
+        </button>
+        <button
+          onClick={handleS3Backup}
+          disabled={db.status !== 'Running' || isBackupTriggering}
+          className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          title="Trigger S3 Backup"
+        >
+          {isBackupTriggering ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
+          S3 Backup
         </button>
         <button
           onClick={() => onDelete(db.name)}
