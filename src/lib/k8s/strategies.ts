@@ -179,3 +179,61 @@ export class PostgresStrategy implements DatabaseStrategy {
         return generatePassword();
     }
 }
+
+export class RedisStrategy implements DatabaseStrategy {
+    getDbType(): string { return 'redis'; }
+
+    getImageName(version: string): string {
+        const v = version || '7';
+        return `redis:${v}-alpine`;
+    }
+
+    getDefaultPort(): number { return 6379; }
+
+    getVolumeName(): string { return 'redis-data'; }
+
+    createContainerEnv(secretName: string): V1EnvVar[] {
+        return [
+            {
+                name: 'REDIS_PASSWORD',
+                valueFrom: { secretKeyRef: { name: secretName, key: 'password' } }
+            }
+        ];
+    }
+
+    createVolumeMounts(): V1VolumeMount[] {
+        return [{ name: 'redis-data', mountPath: '/data' }];
+    }
+
+    getContainerArgs(): string[] {
+        return [
+            'redis-server',
+            '--appendonly', 'yes',
+            '--requirepass', '$(REDIS_PASSWORD)'
+        ];
+    }
+
+    getReadinessProbe(): V1Probe {
+        return {
+            tcpSocket: { port: 6379 },
+            initialDelaySeconds: 5, periodSeconds: 5, failureThreshold: 3
+        };
+    }
+
+    getBackupConfig(name: string, secretName: string, dbName: string) {
+        // No backup strategy for Redis yet
+        return null;
+    }
+
+    getInternalDbName(dbName: string): string {
+        return "0"; // Redis uses DB 0 by default
+    }
+
+    createUsername(): string {
+        return 'default'; // Redis uses 'default' user
+    }
+
+    createPassword(): string {
+        return generatePassword();
+    }
+}

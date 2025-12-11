@@ -4,7 +4,7 @@ import {
     batchV1Api
 } from './client';
 import * as builders from './builder';
-import { PostgresStrategy, DatabaseStrategy } from './strategies';
+import { PostgresStrategy, RedisStrategy, DatabaseStrategy } from './strategies';
 import { config } from '@/lib/config';
 
 export interface CreateDatabaseRequest {
@@ -35,7 +35,9 @@ function getStrategy(type: string): DatabaseStrategy {
     if (type === 'postgres') {
         return new PostgresStrategy();
     }
-    // Redis can be added here later
+    if (type === 'redis') {
+        return new RedisStrategy();
+    }
     throw new Error(`Unknown database type: ${type}`);
 }
 
