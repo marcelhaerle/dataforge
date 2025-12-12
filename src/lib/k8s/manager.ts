@@ -5,11 +5,11 @@ import {
     exec
 } from './client';
 import * as builders from './builder';
-import { PostgresStrategy, RedisStrategy, DatabaseStrategy } from './strategies';
 import { config } from '@/lib/config';
 import { PassThrough } from 'stream';
 import { V1Job } from '@kubernetes/client-node';
 import { storageService } from '../storage';
+import { StrategyFactory } from './strategies/factory';
 
 export interface CreateDatabaseRequest {
     name: string;
@@ -29,20 +29,6 @@ export interface DatabaseInstance {
     ip?: string;
     port?: number;
     backupSchedule: string;
-}
-
-/**
- * Factory to get the correct strategy.
- * For now, we only support Postgres in this port.
- */
-function getStrategy(type: string): DatabaseStrategy {
-    if (type === 'postgres') {
-        return new PostgresStrategy();
-    }
-    if (type === 'redis') {
-        return new RedisStrategy();
-    }
-    throw new Error(`Unknown database type: ${type}`);
 }
 
 /**
@@ -120,7 +106,7 @@ async function ensureGlobalS3Secret() {
 export async function createDatabase(req: CreateDatabaseRequest): Promise<DatabaseInstance> {
     console.log(`Creating database ${req.name} (${req.type})...`);
 
-    const strategy = getStrategy(req.type);
+    const strategy = StrategyFactory.getStrategy(req.type);
     const password = strategy.createPassword();
     const username = strategy.createUsername();
     const internalDbName = strategy.getInternalDbName(req.dbName || req.name);
@@ -274,7 +260,7 @@ export async function deleteDatabase(name: string) {
         const sts = await appsV1Api.readNamespacedStatefulSet({ name: `${name}-statefulset`, namespace: config.NAMESPACE });
         const type = sts.metadata?.labels?.['dataforge.db/type'] || 'postgres';
 
-        const strategy = getStrategy(type);
+        const strategy = StrategyFactory.getStrategy(type);
         const pvcName = `${strategy.getVolumeName()}-${name}-statefulset-0`;
 
         // 2. Delete Resources
@@ -326,7 +312,7 @@ export async function getDatabaseDumpStream(name: string): Promise<ReadableStrea
         throw new Error('Could not determine database type for dump');
     }
 
-    const strategy = getStrategy(type);
+    const strategy = StrategyFactory.getStrategy(type);
     const cmd = strategy.createDumpCommand();
 
     const passthrough = new PassThrough();
@@ -419,7 +405,7 @@ export async function restoreDatabase(name: string, backupKey: string) {
     console.log(`Restoring ${name} from ${backupKey}...`);
 
     const type = await getType(name);
-    const strategy = getStrategy(type);
+    const strategy = StrategyFactory.getStrategy(type);
 
     // 1. Get S3 stream
     const backupStream = await storageService.getBackupStream(backupKey);

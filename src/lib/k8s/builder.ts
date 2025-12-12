@@ -1,5 +1,5 @@
 import * as k8s from '@kubernetes/client-node';
-import { DatabaseStrategy } from './strategies';
+import { DatabaseStrategy } from './strategies/types';
 
 /**
  * Creates the StatefulSet for the database.
