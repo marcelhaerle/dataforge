@@ -15,7 +15,7 @@ export default function BackupsTab({ db, backups }: BackupsTabProps) {
     if (!confirm('Start manual backup to S3?')) return;
     setIsBackupTriggering(true);
     try {
-      const res = await fetch(`/api/databases/${db.name}/backup`, { method: 'POST' });
+      const res = await fetch(`/api/databases/${db.name}/backups`, { method: 'POST' });
       if (res.ok) {
         alert('Backup Job started!');
       } else {
