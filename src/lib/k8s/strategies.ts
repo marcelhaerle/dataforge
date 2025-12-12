@@ -150,7 +150,7 @@ export class PostgresStrategy implements DatabaseStrategy {
             export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY && \
             export AWS_SECRET_ACCESS_KEY=$S3_SECRET_KEY && \
             export AWS_DEFAULT_REGION=$S3_REGION && \
-            pg_dump -h ${name}-service -U $DB_USER $DB_NAME \
+            pg_dump -h ${name}-service -U $DB_USER --clean --if-exists $DB_NAME \
             | aws s3 cp - s3://$S3_BUCKET/${name}/backup_$(date +%Y-%m-%d_%H-%M-%S).sql \
             --endpoint-url $S3_ENDPOINT`
         ];
