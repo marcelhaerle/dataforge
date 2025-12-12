@@ -3,6 +3,7 @@ import * as builders from '@/lib/k8s/builder';
 import { StrategyFactory } from '@/lib/k8s/strategies/factory';
 import { storageService } from '@/lib/storage';
 import { ensureGlobalS3Secret } from './backup';
+import { isK8sError } from '../k8s/errors';
 
 export interface CreateDatabaseRequest {
   name: string;
@@ -55,8 +56,11 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
     // 1. Create Secrets (Credentials)
     // Must be created first so they can be mounted as env vars in the StatefulSet.
     const secretObj = builders.createCredentialsSecretObject(secretName, {
-      username, password, dbName: internalDbName, version: req.version,
-      backupSchedule: req.backupSchedule || '0 3 * * *'
+      username,
+      password,
+      dbName: internalDbName,
+      version: req.version,
+      backupSchedule: req.backupSchedule || '0 3 * * *',
     });
     await k8s.createSecret(secretObj);
 
@@ -74,7 +78,12 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
     // Only created if the strategy supports backups (returns a config).
     const schedule = req.backupSchedule || '0 3 * * *';
     const cronObj = builders.createBackupCronJobObject(
-      req.name, schedule, secretName, internalDbName, req.version, strategy
+      req.name,
+      schedule,
+      secretName,
+      internalDbName,
+      req.version,
+      strategy,
     );
 
     if (cronObj) {
@@ -86,13 +95,14 @@ export async function createDatabase(req: CreateDatabaseRequest): Promise<Databa
       name: req.name,
       type: req.type,
       status: 'Pending',
-      username, password, internalDbName,
-      backupSchedule: schedule
+      username,
+      password,
+      internalDbName,
+      backupSchedule: schedule,
     };
-
-  } catch (err: any) {
+  } catch (err) {
     // Handle "Already Exists" gracefully
-    if (err.body?.code === 409) {
+    if (isK8sError(err) && err.body.code === 409) {
       throw new Error('Database already exists');
     }
     // Critical Failure: Clean up mess
@@ -129,7 +139,7 @@ export async function deleteDatabase(name: string) {
       if (secret.data?.db_name) {
         internalDbName = Buffer.from(secret.data.db_name, 'base64').toString();
       }
-    } catch { }
+    } catch {}
 
     // 2. Delete Kubernetes Resources
     // We delete the StatefulSet first to stop pods writing to the volume.
@@ -142,15 +152,16 @@ export async function deleteDatabase(name: string) {
     // StatefulSets do NOT delete their PVCs automatically to prevent data loss.
     // Since this is an explicit "Delete DB" action, we must clean it up manually.
     console.log(`Deleting PVC ${pvcName}...`);
-    await k8s.deletePVC(pvcName).catch(e => console.warn(`PVC delete failed: ${e.body?.message}`));
+    await k8s
+      .deletePVC(pvcName)
+      .catch((e) => console.warn(`PVC delete failed: ${e.body?.message}`));
 
     // 4. Delete Offsite Backups (S3)
     if (internalDbName) {
       storageService.deleteBackupsFolder(internalDbName).catch(console.error);
     }
-
-  } catch (e: any) {
-    if (e.body?.code === 404) throw new Error('Database not found');
+  } catch (e) {
+    if (isK8sError(e) && e.body?.code === 404) throw new Error('Database not found');
     throw e;
   }
 }
@@ -173,16 +184,18 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
 
     for (const sts of stsList.items) {
       const name = sts.metadata?.labels?.app || 'unknown';
-      const type = (sts.metadata?.labels?.['dataforge.db/type'] || 'postgres') as any;
+      const type = sts.metadata?.labels?.['dataforge.db/type'] as 'postgres' | 'redis';
 
       // Ready Logic: A DB is ready when the number of ready replicas matches desired replicas.
       const isReady = (sts.status?.readyReplicas || 0) === (sts.status?.replicas || 1);
 
       // Default values in case fetching details fails (e.g. during deletion)
-      let info = {
-        username: '', password: '', dbName: '',
+      const info = {
+        username: '',
+        password: '',
+        dbName: '',
         ip: undefined as string | undefined,
-        port: undefined as number | undefined
+        port: undefined as number | undefined,
       };
       let backupSchedule = '';
 
@@ -215,7 +228,7 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
         internalDbName: info.dbName,
         ip: info.ip,
         port: info.port,
-        backupSchedule
+        backupSchedule,
       });
     }
     return databases;
@@ -230,7 +243,7 @@ export async function listDatabases(): Promise<DatabaseInstance[]> {
  */
 export async function getDatabaseDetails(name: string) {
   const list = await listDatabases();
-  const found = list.find(d => d.name === name);
+  const found = list.find((d) => d.name === name);
   if (!found) throw new Error('Database not found');
   return found;
 }

@@ -1,10 +1,7 @@
 import { getDatabaseDetails, getDatabaseDumpStream } from '@/lib/k8s/manager';
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ name: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ name: string }> }) {
   const name = (await params).name;
 
   try {
@@ -15,7 +12,7 @@ export async function GET(
     const extension = dbInstance.type === 'redis' ? 'rdb' : 'sql';
     const filename = `${name}_backup_${date}.${extension}`;
 
-    return new NextResponse(stream as any, {
+    return new NextResponse(stream, {
       headers: {
         'Content-Type': 'application/octet-stream',
         'Content-Disposition': `attachment; filename="${filename}"`,
@@ -23,9 +20,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('Dump error:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate dump' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate dump' }, { status: 500 });
   }
 }

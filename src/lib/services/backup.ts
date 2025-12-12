@@ -3,12 +3,13 @@ import { exec } from '@/lib/k8s/client';
 import { config } from '@/lib/config';
 import { storageService } from '@/lib/storage';
 import { StrategyFactory } from '@/lib/k8s/strategies/factory';
-import { PassThrough, Readable } from 'stream';
+import { PassThrough } from 'stream';
 import { V1Job } from '@kubernetes/client-node';
+import { isK8sError } from '../k8s/errors';
 
 /**
  * Ensures that the global S3 credentials secret exists in the cluster.
- * 
+ *
  * WHY IS THIS NEEDED?
  * The automated CronJobs (running inside the cluster) cannot access the Next.js .env file.
  * They need a native Kubernetes Secret mapped to environment variables to authenticate with S3/MinIO.
@@ -19,9 +20,9 @@ export async function ensureGlobalS3Secret() {
   const secretData = {
     'access-key': config.S3_ACCESS_KEY,
     'secret-key': config.S3_SECRET_KEY,
-    'endpoint': config.S3_ENDPOINT,
-    'bucket': config.S3_BUCKET,
-    'region': config.S3_REGION,
+    endpoint: config.S3_ENDPOINT,
+    bucket: config.S3_BUCKET,
+    region: config.S3_REGION,
   };
 
   try {
@@ -31,13 +32,13 @@ export async function ensureGlobalS3Secret() {
       kind: 'Secret',
       metadata: {
         name: secretName,
-        labels: { 'managed-by': 'dataforge' }
+        labels: { 'managed-by': 'dataforge' },
       },
-      stringData: secretData
+      stringData: secretData,
     });
     console.log(`Created global S3 secret: ${secretName}`);
-  } catch (e: any) {
-    if (e.body?.code === 409) {
+  } catch (e) {
+    if (isK8sError(e) && e.body.code === 409) {
       // Secret already exists -> Update via Patch to ensure latest credentials
       try {
         await k8s.patchSecret(secretName, secretData);
@@ -53,12 +54,12 @@ export async function ensureGlobalS3Secret() {
 
 /**
  * Triggers an immediate backup by creating a one-off Job.
- * 
+ *
  * STRATEGY:
  * Instead of duplicating logic, we clone the PodSpec from the existing CronJob.
  * This ensures the manual backup uses exactly the same image, command, and env vars
  * as the scheduled nightly backup.
- * 
+ *
  * @param name - Database name
  */
 export async function triggerBackup(name: string) {
@@ -83,34 +84,38 @@ export async function triggerBackup(name: string) {
         name: manualJobName,
         namespace: config.NAMESPACE,
         labels: {
-          'app': name,
+          app: name,
           'managed-by': 'dataforge',
-          'dataforge.db/type': 'manual-backup'
-        }
+          'dataforge.db/type': 'manual-backup',
+        },
       },
       spec: {
         ...cronJob.spec.jobTemplate.spec,
         // Aggressive Cleanup: Delete manual job pod after 5 minutes
-        ttlSecondsAfterFinished: 300
-      }
+        ttlSecondsAfterFinished: 300,
+      },
     };
 
     console.log(`Triggering manual backup for ${name} (Job: ${manualJobName})`);
     await k8s.createJob(job);
 
     return { jobName: manualJobName };
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`Failed to trigger backup for ${name}:`, e);
-    throw new Error(e.body?.code === 404 ? 'Backup configuration not found' : 'Failed to trigger backup');
+    throw new Error(
+      isK8sError(e) && e.body?.code === 404
+        ? 'Backup configuration not found'
+        : 'Failed to trigger backup',
+    );
   }
 }
 
 /**
  * Streams a database dump directly from the running pod to the client.
- * 
+ *
  * ARCHITECTURE:
  * [Pod: pg_dump] -> (stdout) -> [K8s Exec API] -> [Node.js PassThrough] -> [Client/Browser]
- * * This creates a backpressure-aware stream chain. We never load the full dump 
+ * * This creates a backpressure-aware stream chain. We never load the full dump
  * into memory, allowing us to handle gigabytes of data with minimal RAM usage.
  */
 export async function getDatabaseDumpStream(name: string): Promise<ReadableStream> {
@@ -135,7 +140,7 @@ export async function getDatabaseDumpStream(name: string): Promise<ReadableStrea
     'database',
     cmd,
     passthrough, // Pipe STDOUT to our stream
-    process.stderr as any,
+    process.stderr,
     null,
     false,
     (status) => {
@@ -143,17 +148,16 @@ export async function getDatabaseDumpStream(name: string): Promise<ReadableStrea
         console.error('Dump stream failed:', status.message);
         passthrough.end();
       }
-    }
+    },
   );
 
   // Convert Node.js Stream to Web Stream (required by Next.js App Router Response)
-  // @ts-ignore
   return new ReadableStream({
     start(controller) {
-      passthrough.on('data', chunk => controller.enqueue(chunk));
+      passthrough.on('data', (chunk) => controller.enqueue(chunk));
       passthrough.on('end', () => controller.close());
-      passthrough.on('error', err => controller.error(err));
-    }
+      passthrough.on('error', (err) => controller.error(err));
+    },
   });
 }
 
@@ -182,30 +186,32 @@ export async function restoreDatabase(name: string, backupKey: string) {
     const killCmd = strategy.createPreRestoreCommand();
     await exec.exec(config.NAMESPACE, podName, 'database', killCmd, null, null, null, false);
   } catch (e) {
-    console.warn("Pre-restore command failed (ignoring):", e);
+    console.warn('Pre-restore command failed (ignoring):', e);
   }
 
   // 2. Restore Pipeline
   const restoreCmd = strategy.createRestoreCommand();
 
   return new Promise<void>((resolve, reject) => {
-    exec.exec(
-      config.NAMESPACE,
-      podName,
-      'database',
-      restoreCmd,
-      null, // stdout ignored (too verbose)
-      process.stderr as any, // log stderr for errors
-      backupStream as any, // Pipe S3 stream into STDIN of the process
-      false,
-      (status) => {
-        if (status.status === 'Failure') {
-          reject(new Error(`Restore execution failed: ${status.message}`));
-        } else {
-          console.log(`Restore for ${name} completed.`);
-          resolve();
-        }
-      }
-    ).catch(reject);
+    exec
+      .exec(
+        config.NAMESPACE,
+        podName,
+        'database',
+        restoreCmd,
+        null, // stdout ignored (too verbose)
+        process.stderr, // log stderr for errors
+        backupStream, // Pipe S3 stream into STDIN of the process
+        false,
+        (status) => {
+          if (status.status === 'Failure') {
+            reject(new Error(`Restore execution failed: ${status.message}`));
+          } else {
+            console.log(`Restore for ${name} completed.`);
+            resolve();
+          }
+        },
+      )
+      .catch(reject);
   });
 }

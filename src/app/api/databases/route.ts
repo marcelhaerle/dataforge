@@ -7,7 +7,7 @@ const createSchema = z.object({
   type: z.enum(['postgres', 'redis']),
   version: z.string().optional().default('17'),
   dbName: z.string().optional(),
-  backupSchedule: z.string().optional()
+  backupSchedule: z.string().optional(),
 });
 
 export async function GET() {
@@ -15,6 +15,7 @@ export async function GET() {
     const dbs = await listDatabases();
     return NextResponse.json(dbs);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: 'Failed to fetch databases' }, { status: 500 });
   }
 }
@@ -30,10 +31,10 @@ export async function POST(request: Request) {
 
     const result = await createDatabase(validation.data);
     return NextResponse.json(result, { status: 201 });
-
-  } catch (error: any) {
-    if (error.message === 'Database already exists') {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    if (message === 'Database already exists') {
+      return NextResponse.json({ error: message }, { status: 409 });
     }
     console.error(error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

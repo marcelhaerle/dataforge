@@ -1,10 +1,10 @@
 'use client';
 
-import { DatabaseInstance } from "@/lib/k8s/manager";
-import { CloudUpload, Copy, Download, Loader2, Trash2 } from "lucide-react";
-import DBIcon from "./DBIcon";
-import StatusBadge from "./StatusBadge";
-import { useState } from "react";
+import { DatabaseInstance } from '@/lib/k8s/manager';
+import { CloudUpload, Copy, Download, Loader2, Trash2 } from 'lucide-react';
+import DBIcon from './DBIcon';
+import StatusBadge from './StatusBadge';
+import { useState } from 'react';
 
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
@@ -21,27 +21,27 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
   const [isBackupTriggering, setIsBackupTriggering] = useState(false);
 
   const getMaskedConnectionString = (db: DatabaseInstance) => {
-    if (!db.ip) return "Waiting for IP...";
+    if (!db.ip) return 'Waiting for IP...';
 
-    let protocol = db.type === 'redis' ? 'redis' : 'postgresql';
-    let user = db.username || 'user';
-    let password = db.password ? '****' : 'password';
-    let host = db.ip;
-    let port = db.port || (db.type === 'redis' ? 6379 : 5432);
-    let database = db.internalDbName || 'defaultdb';
+    const protocol = db.type === 'redis' ? 'redis' : 'postgresql';
+    const user = db.username || 'user';
+    const password = db.password ? '****' : 'password';
+    const host = db.ip;
+    const port = db.port || (db.type === 'redis' ? 6379 : 5432);
+    const database = db.internalDbName || 'defaultdb';
 
     return `${protocol}://${user}:${password}@${host}:${port}/${database}`;
   };
 
   const getUnmaskedConnectionString = (db: DatabaseInstance) => {
-    if (!db.ip) return "Waiting for IP...";
+    if (!db.ip) return 'Waiting for IP...';
 
-    let protocol = db.type === 'redis' ? 'redis' : 'postgresql';
-    let user = db.username || 'user';
-    let password = db.password || 'password';
-    let host = db.ip;
-    let port = db.port || (db.type === 'redis' ? 6379 : 5432);
-    let database = db.internalDbName || 'defaultdb';
+    const protocol = db.type === 'redis' ? 'redis' : 'postgresql';
+    const user = db.username || 'user';
+    const password = db.password || 'password';
+    const host = db.ip;
+    const port = db.port || (db.type === 'redis' ? 6379 : 5432);
+    const database = db.internalDbName || 'defaultdb';
 
     return `${protocol}://${user}:${password}@${host}:${port}/${database}`;
   };
@@ -57,13 +57,14 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
     try {
       const res = await fetch(`/api/databases/${db.name}/backup`, { method: 'POST' });
       if (res.ok) {
-        alert("Backup job started! Check S3 in a few minutes.");
+        alert('Backup job started! Check S3 in a few minutes.');
       } else {
         const err = await res.json();
         alert(`Error: ${err.error}`);
       }
     } catch (e) {
-      alert("Could not start backup.");
+      console.error(e);
+      alert('Could not start backup.');
     } finally {
       setIsBackupTriggering(false);
     }
@@ -71,13 +72,16 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
-
       {/* Card Header */}
       <div className="p-6 border-b border-slate-100 flex justify-between items-start">
         <div className="flex items-center gap-3">
           <DBIcon type={db.type} />
           <div>
-            <h3 className={`font-semibold ${db.type === 'redis' ? 'text-red-700' : 'text-blue-700'}`}>{db.name}</h3>
+            <h3
+              className={`font-semibold ${db.type === 'redis' ? 'text-red-700' : 'text-blue-700'}`}
+            >
+              {db.name}
+            </h3>
             <div className="flex items-center gap-2 text-xs text-slate-500 capitalize">
               {db.type} • {db.internalDbName || 'default'}
             </div>
@@ -91,7 +95,9 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
       <div className="p-6 space-y-4">
         {/* Connection String Box */}
         <div className="bg-slate-900 rounded-lg p-3 relative group/code">
-          <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">Connection String</div>
+          <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">
+            Connection String
+          </div>
           <code className="text-green-400 text-sm font-mono break-all line-clamp-2">
             {getMaskedConnectionString(db)}
           </code>
@@ -127,7 +133,9 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
           </div>
           <div>
             <span className="text-slate-400 block text-xs">Backup Schedule</span>
-            <span className="font-mono text-slate-700">{db.type === "redis" ? "-" : db.backupSchedule}</span>
+            <span className="font-mono text-slate-700">
+              {db.type === 'redis' ? '-' : db.backupSchedule}
+            </span>
           </div>
           <div>
             <span className="text-slate-400 block text-xs">Host Port</span>
@@ -148,7 +156,11 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
           className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           title="Download Database Dump"
         >
-          {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+          {isDownloading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
           Dump
         </button>
         <button
@@ -157,7 +169,11 @@ export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
           className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           title="Trigger S3 Backup"
         >
-          {isBackupTriggering ? <Loader2 className="w-4 h-4 animate-spin" /> : <CloudUpload className="w-4 h-4" />}
+          {isBackupTriggering ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <CloudUpload className="w-4 h-4" />
+          )}
           S3 Backup
         </button>
         <button

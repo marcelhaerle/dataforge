@@ -24,8 +24,8 @@ export class RedisStrategy implements DatabaseStrategy {
     return [
       {
         name: 'REDIS_PASSWORD',
-        valueFrom: { secretKeyRef: { name: secretName, key: 'password' } }
-      }
+        valueFrom: { secretKeyRef: { name: secretName, key: 'password' } },
+      },
     ];
   }
 
@@ -34,11 +34,7 @@ export class RedisStrategy implements DatabaseStrategy {
   }
 
   getContainerArgs(): string[] {
-    return [
-      'redis-server',
-      '--appendonly', 'yes',
-      '--requirepass', '$(REDIS_PASSWORD)'
-    ];
+    return ['redis-server', '--appendonly', 'yes', '--requirepass', '$(REDIS_PASSWORD)'];
   }
 
   getReadinessProbe(): V1Probe {
@@ -46,17 +42,17 @@ export class RedisStrategy implements DatabaseStrategy {
       tcpSocket: { port: 6379 },
       initialDelaySeconds: 5,
       periodSeconds: 5,
-      failureThreshold: 3
+      failureThreshold: 3,
     };
   }
 
-  getBackupConfig(name: string, secretName: string, dbName: string, version: string): BackupConfig | null {
+  getBackupConfig(): BackupConfig | null {
     // Redis backup logic not yet implemented
     return null;
   }
 
-  getInternalDbName(dbName: string): string {
-    return "0";
+  getInternalDbName(): string {
+    return '0';
   }
 
   createUsername(): string {
@@ -68,26 +64,14 @@ export class RedisStrategy implements DatabaseStrategy {
   }
 
   createDumpCommand(): string[] {
-    return [
-      '/bin/sh',
-      '-c',
-      `redis-cli -h localhost -a $REDIS_PASSWORD --rdb -`
-    ];
+    return ['/bin/sh', '-c', `redis-cli -h localhost -a $REDIS_PASSWORD --rdb -`];
   }
 
   createPreRestoreCommand(): string[] {
-    return [
-      '/bin/sh',
-      '-c',
-      'redis-cli -h localhost -a $REDIS_PASSWORD FLUSHALL'
-    ];
+    return ['/bin/sh', '-c', 'redis-cli -h localhost -a $REDIS_PASSWORD FLUSHALL'];
   }
 
   createRestoreCommand(): string[] {
-    return [
-      '/bin/sh',
-      '-c',
-      'redis-cli -h localhost -a $REDIS_PASSWORD --pipe'
-    ];
+    return ['/bin/sh', '-c', 'redis-cli -h localhost -a $REDIS_PASSWORD --pipe'];
   }
 }

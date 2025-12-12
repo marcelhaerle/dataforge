@@ -1,8 +1,8 @@
 'use client';
 
-import { CreateDatabaseRequest } from "@/lib/k8s/manager";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { CreateDatabaseRequest } from '@/lib/k8s/manager';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 interface DBCreateModalProps {
   onClose: () => void;
@@ -14,7 +14,7 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
     name: '',
     type: 'postgres',
     version: '16',
-    dbName: ''
+    dbName: '',
   });
 
   const createDatabase = async (e: React.FormEvent) => {
@@ -30,10 +30,11 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
         onClose();
         setFormData({ name: '', type: 'postgres', version: '16', dbName: '' }); // Reset
       } else {
-        alert("Fehler beim Erstellen (Name schon vergeben?)");
+        alert('Fehler beim Erstellen (Name schon vergeben?)');
       }
     } catch (error) {
-      alert("API Error");
+      console.error(error);
+      alert('API Error');
     } finally {
       setIsSubmitting(false);
     }
@@ -53,7 +54,9 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
       <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <h3 className="font-semibold text-lg text-slate-800">Provision Database</h3>
-          <button onClick={() => onClose()} className="text-slate-400 hover:text-slate-600">✕</button>
+          <button onClick={() => onClose()} className="text-slate-400 hover:text-slate-600">
+            ✕
+          </button>
         </div>
 
         <form onSubmit={createDatabase} className="p-6 space-y-4">
@@ -65,7 +68,7 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
               placeholder="e.g. production-db"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
             <p className="text-xs text-slate-500 mt-1">This will be the Kubernetes Service name.</p>
           </div>
@@ -76,7 +79,9 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
               <select
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 value={formData.type}
-                onChange={e => setFormData({ ...formData, type: e.target.value as 'postgres' | 'redis' })}
+                onChange={(e) =>
+                  setFormData({ ...formData, type: e.target.value as 'postgres' | 'redis' })
+                }
               >
                 <option value="postgres">PostgreSQL</option>
                 <option value="redis">Redis</option>
@@ -87,24 +92,28 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
               <select
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                 value={formData.version}
-                onChange={e => setFormData({ ...formData, version: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, version: e.target.value })}
               >
-                {getVersionOptions(formData.type).map(ver => (
-                  <option key={ver} value={ver}>{ver}</option>
+                {getVersionOptions(formData.type).map((ver) => (
+                  <option key={ver} value={ver}>
+                    {ver}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Internal DB Name (Optional)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Internal DB Name (Optional)
+            </label>
             <input
               type="text"
               placeholder={formData.type === 'redis' ? 'Ignored for Redis' : 'e.g. shop_data'}
               disabled={formData.type === 'redis'}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-100 disabled:text-slate-400"
               value={formData.dbName || ''}
-              onChange={e => setFormData({ ...formData, dbName: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, dbName: e.target.value })}
             />
           </div>
 

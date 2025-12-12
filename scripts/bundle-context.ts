@@ -12,7 +12,7 @@ const IGNORE_DIRS = new Set([
   'coverage',
   'dist',
   'build',
-  'scripts'
+  'scripts',
 ]);
 
 const IGNORE_FILES = new Set([
@@ -23,7 +23,7 @@ const IGNORE_FILES = new Set([
   'project_context.txt',
   '.env',
   '.env.local',
-  'next-env.d.ts'
+  'next-env.d.ts',
 ]);
 
 const ALLOWED_EXTENSIONS = new Set([
@@ -39,7 +39,7 @@ const ALLOWED_EXTENSIONS = new Set([
   '.yml',
   'Dockerfile',
   '.dockerignore',
-  '.gitignore'
+  '.gitignore',
 ]);
 
 const OUTPUT_FILE = 'project_context.txt';
@@ -103,6 +103,7 @@ function bundleProject() {
       console.log(`   Included: ${relativePath}`);
       fileCount++;
     } catch (e) {
+      console.warn(e);
       console.warn(`  Skipping binary or unreadable file: ${filePath}`);
     }
   });
