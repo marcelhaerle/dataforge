@@ -29,19 +29,6 @@ export default function Dashboard() {
     }
   };
 
-  const deleteDatabase = async (name: string) => {
-    if (!confirm(`Willst du die Datenbank "${name}" wirklich löschen? Alle Daten gehen verloren!`))
-      return;
-
-    try {
-      await fetch(`/api/databases/${name}`, { method: 'DELETE' });
-      setDatabases(databases.filter((db) => db.name !== name));
-    } catch (error) {
-      console.error(error);
-      alert('Konnte nicht löschen');
-    }
-  };
-
   // Initial Fetch
   useEffect(() => {
     fetchDatabases();
@@ -105,7 +92,7 @@ export default function Dashboard() {
         {/* --- Grid --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {databases.map((db) => (
-            <DatabasePanel db={db} onDelete={deleteDatabase} key={db.name} />
+            <DatabasePanel db={db} key={db.name} />
           ))}
         </div>
       </main>

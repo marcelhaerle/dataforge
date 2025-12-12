@@ -1,189 +1,60 @@
 'use client';
 
 import { DatabaseInstance } from '@/lib/k8s/manager';
-import { CloudUpload, Copy, Download, Loader2, Trash2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import DBIcon from './DBIcon';
 import StatusBadge from './StatusBadge';
-import { useState } from 'react';
-
-const copyToClipboard = (text: string) => {
-  navigator.clipboard.writeText(text);
-  // TODO Show toast notification
-};
+import Link from 'next/link';
 
 interface DatabasePanelProps {
   db: DatabaseInstance;
-  onDelete: (db_name: string) => void;
 }
 
-export default function DatabasePanel({ db, onDelete }: DatabasePanelProps) {
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [isBackupTriggering, setIsBackupTriggering] = useState(false);
-
-  const getMaskedConnectionString = (db: DatabaseInstance) => {
-    if (!db.ip) return 'Waiting for IP...';
-
-    const protocol = db.type === 'redis' ? 'redis' : 'postgresql';
-    const user = db.username || 'user';
-    const password = db.password ? '****' : 'password';
-    const host = db.ip;
-    const port = db.port || (db.type === 'redis' ? 6379 : 5432);
-    const database = db.internalDbName || 'defaultdb';
-
-    return `${protocol}://${user}:${password}@${host}:${port}/${database}`;
-  };
-
-  const getUnmaskedConnectionString = (db: DatabaseInstance) => {
-    if (!db.ip) return 'Waiting for IP...';
-
-    const protocol = db.type === 'redis' ? 'redis' : 'postgresql';
-    const user = db.username || 'user';
-    const password = db.password || 'password';
-    const host = db.ip;
-    const port = db.port || (db.type === 'redis' ? 6379 : 5432);
-    const database = db.internalDbName || 'defaultdb';
-
-    return `${protocol}://${user}:${password}@${host}:${port}/${database}`;
-  };
-
-  const handleDownload = () => {
-    setIsDownloading(true);
-    window.location.href = `/api/databases/${db.name}/dump`;
-    setTimeout(() => setIsDownloading(false), 5000);
-  };
-
-  const handleS3Backup = async () => {
-    setIsBackupTriggering(true);
-    try {
-      const res = await fetch(`/api/databases/${db.name}/backup`, { method: 'POST' });
-      if (res.ok) {
-        alert('Backup job started! Check S3 in a few minutes.');
-      } else {
-        const err = await res.json();
-        alert(`Error: ${err.error}`);
-      }
-    } catch (e) {
-      console.error(e);
-      alert('Could not start backup.');
-    } finally {
-      setIsBackupTriggering(false);
-    }
-  };
-
+export default function DatabasePanel({ db }: DatabasePanelProps) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
-      {/* Card Header */}
-      <div className="p-6 border-b border-slate-100 flex justify-between items-start">
-        <div className="flex items-center gap-3">
-          <DBIcon type={db.type} />
-          <div>
-            <h3
-              className={`font-semibold ${db.type === 'redis' ? 'text-red-700' : 'text-blue-700'}`}
-            >
-              {db.name}
-            </h3>
-            <div className="flex items-center gap-2 text-xs text-slate-500 capitalize">
-              {db.type} • {db.internalDbName || 'default'}
+    <Link href={`/databases/${db.name}`} className="block group">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all overflow-hidden h-full flex flex-col">
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex justify-between items-start">
+          <div className="flex items-center gap-3">
+            <DBIcon type={db.type} />
+            <div>
+              <h3
+                className={`font-semibold text-lg ${db.type === 'redis' ? 'text-red-700' : 'text-blue-700'}`}
+              >
+                {db.name}
+              </h3>
+              <div className="flex items-center gap-2 text-xs text-slate-500 capitalize">
+                {db.type} • {db.internalDbName || 'default'}
+              </div>
             </div>
           </div>
+          <StatusBadge status={db.status} />
         </div>
 
-        <StatusBadge status={db.status} />
-      </div>
-
-      {/* Card Body (Details) */}
-      <div className="p-6 space-y-4">
-        {/* Connection String Box */}
-        <div className="bg-slate-900 rounded-lg p-3 relative group/code">
-          <div className="text-xs text-slate-400 mb-1 uppercase tracking-wider font-semibold">
-            Connection String
+        {/* Mini Stats (Body) */}
+        <div className="p-6 space-y-2 grow">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-400">Host IP</span>
+            <span className="font-mono text-slate-700">{db.ip || '...'}</span>
           </div>
-          <code className="text-green-400 text-sm font-mono break-all line-clamp-2">
-            {getMaskedConnectionString(db)}
-          </code>
-          <button
-            onClick={() => copyToClipboard(getUnmaskedConnectionString(db))}
-            className="absolute top-2 right-2 p-1.5 bg-slate-800 rounded hover:bg-slate-700 text-slate-300 transition-colors opacity-0 group-hover/code:opacity-100"
-            title="Copy"
-          >
-            <Copy className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Meta Details */}
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-slate-400 block text-xs">Username</span>
-            <span className="font-mono text-slate-700">{db.username || '-'}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-xs">Password</span>
-            <span className="font-mono text-slate-700">*********</span>
-            <button
-              onClick={() => copyToClipboard(db.password || '')}
-              className="ml-5 p-1.5 bg-slate-200 rounded hover:bg-slate-500 text-slate-600 hover:text-slate-100 transition-colors"
-              title="Copy"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-xs">Datbase</span>
-            <span className="font-mono text-slate-700">{db.internalDbName}</span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-xs">Backup Schedule</span>
-            <span className="font-mono text-slate-700">
-              {db.type === 'redis' ? '-' : db.backupSchedule}
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400 block text-xs">Host Port</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-400">Port</span>
             <span className="font-mono text-slate-700">{db.port || '-'}</span>
           </div>
-          <div>
-            <span className="text-slate-400 block text-xs">Host IP</span>
-            <span className="font-mono text-slate-700">{db.ip || 'Pending...'}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-400">Backup</span>
+            <span className="font-mono text-slate-700">
+              {db.type === 'postgres' ? 'Daily 3AM' : 'N/A'}
+            </span>
           </div>
         </div>
-      </div>
 
-      {/* Card Footer */}
-      <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-        <button
-          onClick={handleDownload}
-          disabled={db.status !== 'Running' || isDownloading}
-          className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Download Database Dump"
-        >
-          {isDownloading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          Dump
-        </button>
-        <button
-          onClick={handleS3Backup}
-          disabled={db.status !== 'Running' || isBackupTriggering}
-          className="text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Trigger S3 Backup"
-        >
-          {isBackupTriggering ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <CloudUpload className="w-4 h-4" />
-          )}
-          S3 Backup
-        </button>
-        <button
-          onClick={() => onDelete(db.name)}
-          className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-md transition-all flex items-center gap-2 text-sm"
-        >
-          <Trash2 className="w-4 h-4" />
-          Delete
-        </button>
+        {/* Footer Link */}
+        <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 flex justify-end items-center gap-1 text-xs font-medium text-slate-500 group-hover:text-indigo-600 transition-colors">
+          Manage Instance <ArrowRight className="w-3 h-3" />
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
