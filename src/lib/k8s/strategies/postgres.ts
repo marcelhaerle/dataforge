@@ -24,21 +24,21 @@ export class PostgresStrategy implements DatabaseStrategy {
     return [
       {
         name: 'POSTGRES_PASSWORD',
-        valueFrom: { secretKeyRef: { name: secretName, key: 'password' } }
+        valueFrom: { secretKeyRef: { name: secretName, key: 'password' } },
       },
       {
         name: 'POSTGRES_USER',
-        valueFrom: { secretKeyRef: { name: secretName, key: 'username' } }
+        valueFrom: { secretKeyRef: { name: secretName, key: 'username' } },
       },
       {
         name: 'POSTGRES_DB',
-        valueFrom: { secretKeyRef: { name: secretName, key: 'db_name' } }
+        valueFrom: { secretKeyRef: { name: secretName, key: 'db_name' } },
       },
       // Fix for Lost+Found folder issues on some storage providers
       {
         name: 'PGDATA',
-        value: '/var/lib/postgresql/data/pgdata'
-      }
+        value: '/var/lib/postgresql/data/pgdata',
+      },
     ];
   }
 
@@ -46,8 +46,8 @@ export class PostgresStrategy implements DatabaseStrategy {
     return [
       {
         name: 'postgres-data',
-        mountPath: '/var/lib/postgresql/data'
-      }
+        mountPath: '/var/lib/postgresql/data',
+      },
     ];
   }
 
@@ -58,11 +58,11 @@ export class PostgresStrategy implements DatabaseStrategy {
   getReadinessProbe(): V1Probe {
     return {
       exec: {
-        command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -p 5432']
+        command: ['/bin/sh', '-c', 'pg_isready -h 127.0.0.1 -p 5432'],
       },
       initialDelaySeconds: 5,
       periodSeconds: 10,
-      failureThreshold: 3
+      failureThreshold: 3,
     };
   }
 
@@ -78,7 +78,7 @@ export class PostgresStrategy implements DatabaseStrategy {
       export AWS_DEFAULT_REGION=$S3_REGION && \
       pg_dump -h ${name}-service -U $DB_USER --clean --if-exists $DB_NAME \
       | aws s3 cp - s3://$S3_BUCKET/${name}/backup_$(date +%Y-%m-%d_%H-%M-%S).sql \
-      --endpoint-url $S3_ENDPOINT`
+      --endpoint-url $S3_ENDPOINT`,
     ];
 
     return {
@@ -87,14 +87,14 @@ export class PostgresStrategy implements DatabaseStrategy {
       env: [
         {
           name: 'DB_USER',
-          valueFrom: { secretKeyRef: { name: secretName, key: 'username' } }
+          valueFrom: { secretKeyRef: { name: secretName, key: 'username' } },
         },
         {
           name: 'PGPASSWORD',
-          valueFrom: { secretKeyRef: { name: secretName, key: 'password' } }
+          valueFrom: { secretKeyRef: { name: secretName, key: 'password' } },
         },
-        { name: 'DB_NAME', value: dbName }
-      ]
+        { name: 'DB_NAME', value: dbName },
+      ],
     };
   }
 
@@ -111,26 +111,18 @@ export class PostgresStrategy implements DatabaseStrategy {
   }
 
   createDumpCommand(): string[] {
-    return [
-      '/bin/sh',
-      '-c',
-      `pg_dump -h localhost -U $DB_USER $DB_NAME`
-    ];
+    return ['/bin/sh', '-c', `pg_dump -h localhost -U $DB_USER $DB_NAME`];
   }
 
   createPreRestoreCommand(): string[] {
     return [
       '/bin/sh',
       '-c',
-      'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname = current_database();"'
+      'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname = current_database();"',
     ];
   }
 
   createRestoreCommand(): string[] {
-    return [
-      '/bin/sh',
-      '-c',
-      'psql -h localhost -U $DB_USER -d $DB_NAME'
-    ];
+    return ['/bin/sh', '-c', 'psql -h localhost -U $DB_USER -d $DB_NAME'];
   }
 }

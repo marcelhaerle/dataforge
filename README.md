@@ -1,6 +1,6 @@
 # DataForge
 
-__Your self-hosted Database-as-a-Service (DBaaS)__. > Provision, manage, and backup databases on Kubernetes with a single click.
+**Your self-hosted Database-as-a-Service (DBaaS)**. > Provision, manage, and backup databases on Kubernetes with a single click.
 
 DataForge is a lightweight, modern platform designed for Homelabs and Internal Developer Platforms. It acts as a "Vending Machine" for databases, allowing developers to spin up production-ready PostgreSQL and Redis instances without writing a single line of YAML.
 
@@ -20,24 +20,24 @@ It bridges the gap between complex operators (like KubeDB) and manual Helm chart
 
 We are actively working on expanding the platform. Planned features include:
 
-- [ ] __MySQL / MariaDB Support:__ Full support for the LAMP stack favorite.
-- [ ] __MongoDB Support:__ NoSQL document store provisioning.
-- [ ] __Restore UI:__ Restore backups directly from the dashboard (Point-in-Time Recovery).
-- [ ] __Database Cloning:__ One-click cloning of production databases to development environments.
-- [ ] __Scale-to-Zero (Sleep Mode):__ Automatically pause unused databases to save cluster resources.
-- [ ] __Embedded Admin Tools:__ Integrated Web-UI for SQL (Adminer) and Redis (Redis Commander).
-- [ ] __User Management:__ Multi-user support with quotas.
-- [ ] __Metrics:__ Prometheus integration for database monitoring.
+- [ ] **MySQL / MariaDB Support:** Full support for the LAMP stack favorite.
+- [ ] **MongoDB Support:** NoSQL document store provisioning.
+- [ ] **Restore UI:** Restore backups directly from the dashboard (Point-in-Time Recovery).
+- [ ] **Database Cloning:** One-click cloning of production databases to development environments.
+- [ ] **Scale-to-Zero (Sleep Mode):** Automatically pause unused databases to save cluster resources.
+- [ ] **Embedded Admin Tools:** Integrated Web-UI for SQL (Adminer) and Redis (Redis Commander).
+- [ ] **User Management:** Multi-user support with quotas.
+- [ ] **Metrics:** Prometheus integration for database monitoring.
 
 ## Architecture
 
 DataForge follows the Controller Pattern, but simplifies it by integrating the control logic directly into a Next.js application.
 
-- __Frontend:__ React (App Router) + Tailwind CSS for the Dashboard.
-- __Backend:__ Next.js API Routes acting as the Kubernetes Controller.
-- __Cluster Communication:__ Uses the official `@kubernetes/client-node` library.
-- __Storage:__ Relies on default StorageClasses (e.g., Longhorn, Rook-Ceph, or Local Path).
-- __Networking:__ Leverages `LoadBalancer` services (requires MetalLB or similar) to assign dedicated IPs to databases.
+- **Frontend:** React (App Router) + Tailwind CSS for the Dashboard.
+- **Backend:** Next.js API Routes acting as the Kubernetes Controller.
+- **Cluster Communication:** Uses the official `@kubernetes/client-node` library.
+- **Storage:** Relies on default StorageClasses (e.g., Longhorn, Rook-Ceph, or Local Path).
+- **Networking:** Leverages `LoadBalancer` services (requires MetalLB or similar) to assign dedicated IPs to databases.
 
 ## Getting Started
 
@@ -92,7 +92,7 @@ Open http://localhost:3000 in your browser.
 
 ## Contributing
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are __greatly appreciated__.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project (Create your own copy)
 2. Create your Feature Branch (`git checkout -b feat/AmazingFeature`)

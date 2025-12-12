@@ -9,10 +9,10 @@ export function createStatefulSetObject(
   name: string,
   secretName: string,
   version: string,
-  strategy: DatabaseStrategy
+  strategy: DatabaseStrategy,
 ): k8s.V1StatefulSet {
   const labels = {
-    'app': name,
+    app: name,
     'managed-by': 'dataforge',
     'dataforge.db/type': strategy.getDbType(),
   };
@@ -79,17 +79,14 @@ export function createStatefulSetObject(
  * Creates the Service to expose the database.
  * We use LoadBalancer to get a dedicated IP (via MetalLB) for each DB.
  */
-export function createServiceObject(
-  name: string,
-  strategy: DatabaseStrategy
-): k8s.V1Service {
+export function createServiceObject(name: string, strategy: DatabaseStrategy): k8s.V1Service {
   return {
     apiVersion: 'v1',
     kind: 'Service',
     metadata: {
       name: `${name}-service`,
       labels: {
-        'app': name,
+        app: name,
         'managed-by': 'dataforge',
       },
     },
@@ -113,7 +110,13 @@ export function createServiceObject(
  */
 export function createCredentialsSecretObject(
   name: string,
-  credentials: { username: string; password: string; dbName: string; version: string, backupSchedule: string }
+  credentials: {
+    username: string;
+    password: string;
+    dbName: string;
+    version: string;
+    backupSchedule: string;
+  },
 ): k8s.V1Secret {
   return {
     apiVersion: 'v1',
@@ -144,7 +147,7 @@ export function createBackupCronJobObject(
   dbSecretName: string,
   dbName: string,
   dbVersion: string,
-  strategy: DatabaseStrategy
+  strategy: DatabaseStrategy,
 ): k8s.V1CronJob | null {
   const backupConfig = strategy.getBackupConfig(name, dbSecretName, dbName, dbVersion);
 
@@ -160,7 +163,7 @@ export function createBackupCronJobObject(
     metadata: {
       name: jobName,
       labels: {
-        'app': name,
+        app: name,
         'managed-by': 'dataforge',
         'dataforge.db/type': 'backup',
       },

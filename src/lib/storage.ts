@@ -1,4 +1,9 @@
-import { S3Client, ListObjectsV2Command, DeleteObjectsCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { config } from '@/lib/config';
 import { Readable } from 'stream';
 
@@ -41,15 +46,12 @@ class StorageService {
 
       if (!response.Contents) return [];
 
-      return response.Contents
-        .map(item => ({
-          key: item.Key!,
-          filename: item.Key!.split('/').pop() || 'unknown',
-          sizeMb: Math.round((item.Size || 0) / 1024 / 1024 * 100) / 100,
-          lastModified: item.LastModified || new Date(),
-        }))
-        .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime()); // Newest first
-
+      return response.Contents.map((item) => ({
+        key: item.Key!,
+        filename: item.Key!.split('/').pop() || 'unknown',
+        sizeMb: Math.round(((item.Size || 0) / 1024 / 1024) * 100) / 100,
+        lastModified: item.LastModified || new Date(),
+      })).sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime()); // Newest first
     } catch (error) {
       console.error(`S3 List Error for ${name}:`, error);
       return [];
@@ -76,14 +78,13 @@ class StorageService {
       const deleteCommand = new DeleteObjectsCommand({
         Bucket: this.bucket,
         Delete: {
-          Objects: listParams.Contents.map(item => ({ Key: item.Key })),
+          Objects: listParams.Contents.map((item) => ({ Key: item.Key })),
           Quiet: true,
         },
       });
 
       await this.client.send(deleteCommand);
       console.log(`Deleted S3 backups for ${name}`);
-
     } catch (error) {
       console.error(`Failed to delete S3 backups for ${name}:`, error);
       // We do not throw an error here to prevent DB deletion from failing just because S3 is having issues
@@ -91,15 +92,15 @@ class StorageService {
   }
 
   /**
-    * Prunes old backups for a specific database, keeping only the most recent ones.
-    * Backups are sorted by last modified date (newest first), and only the newest
-    * backups up to the `keep` limit are retained. All older backups are deleted.
-    * 
-    * @param dbName - The name of the database whose backups should be pruned
-    * @param keep - The number of most recent backups to keep (default: 5)
-    * @returns The number of backups that were deleted
-    * @throws {Error} If the deletion operation fails
-  */
+   * Prunes old backups for a specific database, keeping only the most recent ones.
+   * Backups are sorted by last modified date (newest first), and only the newest
+   * backups up to the `keep` limit are retained. All older backups are deleted.
+   *
+   * @param dbName - The name of the database whose backups should be pruned
+   * @param keep - The number of most recent backups to keep (default: 5)
+   * @returns The number of backups that were deleted
+   * @throws {Error} If the deletion operation fails
+   */
   async pruneBackups(dbName: string, keep: number = 5): Promise<number> {
     const backups = await this.listBackups(dbName);
 
@@ -117,7 +118,7 @@ class StorageService {
       const deleteCommand = new DeleteObjectsCommand({
         Bucket: this.bucket,
         Delete: {
-          Objects: toDelete.map(b => ({ Key: b.key })),
+          Objects: toDelete.map((b) => ({ Key: b.key })),
           Quiet: true,
         },
       });
@@ -125,14 +126,14 @@ class StorageService {
       await this.client.send(deleteCommand);
       return toDelete.length;
     } catch (e) {
-      console.error("Prune failed:", e);
-      throw new Error("Failed to prune backups");
+      console.error('Prune failed:', e);
+      throw new Error('Failed to prune backups');
     }
   }
 
   /**
    * Retrieves a backup file from S3 as a readable stream.
-   * 
+   *
    * @param key - The S3 object key of the backup file to retrieve
    * @returns A readable stream of the backup file contents
    * @throws {Error} If the backup file is empty or not found
@@ -146,7 +147,7 @@ class StorageService {
     const response = await this.client.send(command);
 
     if (!response.Body) {
-      throw new Error("Backup file is empty or not found");
+      throw new Error('Backup file is empty or not found');
     }
 
     return response.Body as Readable;

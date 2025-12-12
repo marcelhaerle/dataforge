@@ -4,10 +4,10 @@ import { V1Secret, V1Service, V1StatefulSet, V1CronJob, V1Job } from '@kubernete
 
 /**
  * Kubernetes API Facade.
- * 
+ *
  * This object serves as an abstraction layer (Facade Pattern) between the business logic
  * (Managers/Services) and the raw Kubernetes client library.
- * 
+ *
  * Responsibilities:
  * 1. Configuration Injection: Automatically injects the configured namespace (`config.NAMESPACE`) into every call.
  * 2. Error Handling: Standardizes error handling, e.g., suppressing "Not Found" errors during deletion to ensure idempotency.
@@ -21,7 +21,7 @@ export const k8s = {
 
   /**
    * Creates a new Secret in the configured namespace.
-   * 
+   *
    * @param body - The full Kubernetes Secret object definition.
    */
   async createSecret(body: V1Secret) {
@@ -30,7 +30,7 @@ export const k8s = {
 
   /**
    * Retrieves a Secret by its name.
-   * 
+   *
    * @param name - The name of the secret to fetch.
    * @returns The Secret object if found, throws an error otherwise.
    */
@@ -42,17 +42,17 @@ export const k8s = {
    * Deletes a Secret.
    * NOTE: This operation is idempotent. It catches and suppresses errors (like 404 Not Found),
    * allowing cleanup routines to run safely even if the resource is already gone.
-   * 
+   *
    * @param name - The name of the secret to delete.
    */
   async deleteSecret(name: string) {
-    return coreV1Api.deleteNamespacedSecret({ name, namespace: config.NAMESPACE }).catch(() => { });
+    return coreV1Api.deleteNamespacedSecret({ name, namespace: config.NAMESPACE }).catch(() => {});
   },
 
   /**
    * Updates specific fields in a Secret's `stringData` map.
    * This is useful for updating passwords or configuration without replacing the entire object.
-   * 
+   *
    * @param name - Name of the secret to patch.
    * @param data - Key-value map of strings to update.
    */
@@ -60,7 +60,7 @@ export const k8s = {
     return coreV1Api.patchNamespacedSecret({
       name,
       namespace: config.NAMESPACE,
-      body: { stringData: data }
+      body: { stringData: data },
     });
   },
 
@@ -71,7 +71,7 @@ export const k8s = {
 
   /**
    * Creates a Service (usually Type: LoadBalancer) to expose the database.
-   * 
+   *
    * @param body - The Service definition.
    */
   async createService(body: V1Service) {
@@ -80,7 +80,7 @@ export const k8s = {
 
   /**
    * Fetches a Service to inspect its status (e.g., to retrieve the assigned External IP).
-   * 
+   *
    * @param name - The name of the service.
    * @returns The Service object or `null` if not found (avoids throwing 404).
    */
@@ -94,7 +94,7 @@ export const k8s = {
    * @param name - The name of the service to delete.
    */
   async deleteService(name: string) {
-    return coreV1Api.deleteNamespacedService({ name, namespace: config.NAMESPACE }).catch(() => { });
+    return coreV1Api.deleteNamespacedService({ name, namespace: config.NAMESPACE }).catch(() => {});
   },
 
   // ===========================================================================
@@ -105,7 +105,7 @@ export const k8s = {
 
   /**
    * Creates the StatefulSet for the database.
-   * 
+   *
    * @param body - The StatefulSet definition including Pod template and VolumeClaimTemplates.
    */
   async createStatefulSet(body: V1StatefulSet) {
@@ -114,7 +114,7 @@ export const k8s = {
 
   /**
    * Retrieves a StatefulSet to check its status (replicas vs. readyReplicas).
-   * 
+   *
    * @param name - The name of the StatefulSet.
    */
   async getStatefulSet(name: string) {
@@ -124,7 +124,7 @@ export const k8s = {
   /**
    * Lists all StatefulSets in the namespace that match a specific label selector.
    * Used to generate the dashboard list.
-   * 
+   *
    * @param labelSelector - A filter string, e.g., "managed-by=dataforge".
    */
   async listStatefulSets(labelSelector: string) {
@@ -136,15 +136,17 @@ export const k8s = {
    * CRITICAL: Uses `propagationPolicy: 'Foreground'`.
    * This ensures that Kubernetes waits until all Pods are terminated BEFORE deleting the StatefulSet object.
    * This prevents "ghost pods" or race conditions during deletion.
-   * 
+   *
    * @param name - The name of the StatefulSet.
    */
   async deleteStatefulSet(name: string) {
-    return appsV1Api.deleteNamespacedStatefulSet({
-      name,
-      namespace: config.NAMESPACE,
-      body: { propagationPolicy: 'Foreground' }
-    }).catch(() => { });
+    return appsV1Api
+      .deleteNamespacedStatefulSet({
+        name,
+        namespace: config.NAMESPACE,
+        body: { propagationPolicy: 'Foreground' },
+      })
+      .catch(() => {});
   },
 
   // ===========================================================================
@@ -154,7 +156,7 @@ export const k8s = {
 
   /**
    * Creates a CronJob for scheduled backups (e.g., nightly dumps to S3).
-   * 
+   *
    * @param body - The CronJob definition.
    */
   async createCronJob(body: V1CronJob) {
@@ -163,7 +165,7 @@ export const k8s = {
 
   /**
    * Retrieves a CronJob to inspect its schedule or copy its template for manual runs.
-   * 
+   *
    * @param name - The name of the CronJob.
    */
   async getCronJob(name: string) {
@@ -173,17 +175,19 @@ export const k8s = {
   /**
    * Deletes a CronJob.
    * Ignores errors if it doesn't exist (e.g., for Redis which might not have backups enabled).
-   * 
+   *
    * @param name - The name of the CronJob.
    */
   async deleteCronJob(name: string) {
-    return batchV1Api.deleteNamespacedCronJob({ name, namespace: config.NAMESPACE }).catch(() => { });
+    return batchV1Api
+      .deleteNamespacedCronJob({ name, namespace: config.NAMESPACE })
+      .catch(() => {});
   },
 
   /**
    * Creates a one-off Job.
    * Used when the user clicks "Backup Now" in the UI.
-   * 
+   *
    * @param body - The Job definition (usually cloned from a CronJob spec).
    */
   async createJob(body: V1Job) {
@@ -199,10 +203,10 @@ export const k8s = {
    * Deletes a PersistentVolumeClaim.
    * WARNING: This is a destructive action! It deletes the data volume.
    * Kubernetes StatefulSets do NOT delete their PVCs automatically, so we must do this manually.
-   * 
+   *
    * @param name - The name of the PVC (usually: `<volume-name>-<pod-name>-<ordinal>`).
    */
   async deletePVC(name: string) {
     return coreV1Api.deleteNamespacedPersistentVolumeClaim({ name, namespace: config.NAMESPACE });
-  }
+  },
 };

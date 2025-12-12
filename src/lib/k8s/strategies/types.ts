@@ -19,7 +19,7 @@ export interface BackupConfig {
  * orchestration (Manager/Builder) from the specific database technology.
  */
 export interface DatabaseStrategy {
-  /** 
+  /**
    * Returns the unique internal type name (e.g., 'postgres', 'redis', 'mysql').
    * This is used as a key in the factory and for labeling resources.
    */
@@ -27,12 +27,12 @@ export interface DatabaseStrategy {
 
   /**
    * Returns the Docker image string for the requested version.
-   * 
+   *
    * @param version - The version string requested by the user (e.g. "17")
    */
   getImageName(version: string): string;
 
-  /** 
+  /**
    * Returns the default port the database listens on (e.g. 5432).
    * This will be used for both the container port and the Service port.
    */
@@ -47,7 +47,7 @@ export interface DatabaseStrategy {
   /**
    * Generates the environment variables required for the main database container.
    * This is typically used to inject credentials from the generated Secret.
-   * 
+   *
    * @param secretName - The name of the Kubernetes Secret containing 'username', 'password', etc.
    */
   createContainerEnv(secretName: string): V1EnvVar[];
@@ -72,13 +72,18 @@ export interface DatabaseStrategy {
   /**
    * Generates the configuration for the automated backup CronJob.
    * If the database does not support automated backups yet, return null.
-   * 
+   *
    * @param name - The name of the database resource
    * @param secretName - The name of the credentials secret
    * @param dbName - The internal database name
    * @param version - The database version (to choose the right tool image)
    */
-  getBackupConfig(name: string, secretName: string, dbName: string, version: string): BackupConfig | null;
+  getBackupConfig(
+    name: string,
+    secretName: string,
+    dbName: string,
+    version: string,
+  ): BackupConfig | null;
 
   /**
    * Normalizes the user-provided database name to be compatible with the database engine.

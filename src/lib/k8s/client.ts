@@ -16,14 +16,16 @@ const currentCluster = kc.getCurrentCluster();
 
 // Patch to skip TLS verification for HTTP clusters (not recommended for production)
 if (currentCluster && currentCluster.server.startsWith('http:')) {
-  const clusterIndex = kc.clusters.findIndex(c => c.name === currentCluster.name);
+  const clusterIndex = kc.clusters.findIndex((c) => c.name === currentCluster.name);
 
   if (clusterIndex > -1) {
     kc.clusters[clusterIndex] = {
       ...kc.clusters[clusterIndex],
       skipTLSVerify: true,
     };
-    console.log('🔓 Insecure HTTP connection detected: Enabled skipTLSVerify via clean config patch');
+    console.log(
+      '🔓 Insecure HTTP connection detected: Enabled skipTLSVerify via clean config patch',
+    );
   }
 }
 
