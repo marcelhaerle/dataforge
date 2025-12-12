@@ -9,6 +9,7 @@ import { PostgresStrategy, RedisStrategy, DatabaseStrategy } from './strategies'
 import { config } from '@/lib/config';
 import { PassThrough } from 'stream';
 import { V1Job } from '@kubernetes/client-node';
+import { storageService } from '../storage';
 
 export interface CreateDatabaseRequest {
     name: string;
@@ -405,4 +406,64 @@ export async function triggerBackup(name: string) {
         console.error(`Failed to trigger backup for ${name}:`, e);
         throw new Error('Failed to trigger backup');
     }
+}
+
+/**
+ * Restore a database from an S3 backup key.
+ * CAUTION: This overwrites data!
+ */
+export async function restoreDatabase(name: string, backupKey: string) {
+    const podName = `${name}-statefulset-0`;
+    const namespace = config.NAMESPACE;
+
+    console.log(`Restoring ${name} from ${backupKey}...`);
+
+    const type = await getType(name);
+    const strategy = getStrategy(type);
+
+    // 1. Get S3 stream
+    const backupStream = await storageService.getBackupStream(backupKey);
+
+    // 2. Terminate database connections (important!)
+    try {
+        const killCmd = strategy.createPreRestoreCommand();
+        await exec.exec(namespace, podName, 'database', killCmd, null, null, null, false);
+        console.log("Active connections terminated.");
+    } catch (e) {
+        console.warn("Could not terminate connections (maybe none active):", e);
+    }
+
+    // 3. Restore via Pipe
+    const restoreCmd = strategy.createRestoreCommand();
+
+    return new Promise<void>((resolve, reject) => {
+        exec.exec(
+            namespace,
+            podName,
+            'database',
+            restoreCmd,
+            null, // ignore stdout (too much data)
+            process.stderr as any, // log stderr
+            backupStream as any,
+            false, // tty
+            (status) => {
+                if (status.status === 'Failure') {
+                    console.error('Restore failed k8s exec:', status.message);
+                    reject(new Error('Restore execution failed'));
+                } else {
+                    console.log(`Restore for ${name} completed.`);
+                    resolve();
+                }
+            }
+        ).catch(reject);
+    });
+}
+
+async function getType(name: string): Promise<string> {
+    const sts = await appsV1Api.readNamespacedStatefulSet({ name: `${name}-statefulset`, namespace: config.NAMESPACE });
+    const type = sts.metadata?.labels?.['dataforge.db/type'];
+    if (!type) {
+        throw new Error('Could not determine database type');
+    }
+    return type;
 }

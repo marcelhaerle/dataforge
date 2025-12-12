@@ -67,6 +67,18 @@ export interface DatabaseStrategy {
      * Used for export functionality.
      */
     createDumpCommand(): string[];
+
+    /**
+     * Command to prepare the database before restoring a dump.
+     * E.g., dropping existing connections or databases.
+     */
+    createPreRestoreCommand(): string[];
+
+    /**
+     * Command to restore a dump into the database.
+     * Restore data is piped into this command.
+     */
+    createRestoreCommand(): string[];
 }
 
 /**
@@ -192,6 +204,23 @@ export class PostgresStrategy implements DatabaseStrategy {
             `pg_dump -h localhost -U $DB_USER $DB_NAME`
         ];
     }
+
+    createPreRestoreCommand(): string[] {
+        return [
+            '/bin/sh',
+            '-c',
+            'psql -U $POSTGRES_USER -d $POSTGRES_DB -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND datname = current_database();"'
+        ];
+    }
+
+    createRestoreCommand(): string[] {
+        return [
+            '/bin/sh',
+            '-c',
+            // psql reads from stdin by default
+            'psql -h localhost -U $DB_USER -d $DB_NAME'
+        ];
+    }
 }
 
 export class RedisStrategy implements DatabaseStrategy {
@@ -256,6 +285,22 @@ export class RedisStrategy implements DatabaseStrategy {
             '/bin/sh',
             '-c',
             `redis-cli -h localhost -a $REDIS_PASSWORD --rdb -`
+        ];
+    }
+
+    createPreRestoreCommand(): string[] {
+        return [
+            '/bin/sh',
+            '-c',
+            'redis-cli -h localhost -a $REDIS_PASSWORD FLUSHALL'
+        ];
+    }
+
+    createRestoreCommand(): string[] {
+        return [
+            '/bin/sh',
+            '-c',
+            'redis-cli -h localhost -a $REDIS_PASSWORD --pipe'
         ];
     }
 }

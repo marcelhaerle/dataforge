@@ -1,5 +1,6 @@
-import { S3Client, ListObjectsV2Command, DeleteObjectsCommand } from '@aws-sdk/client-s3';
+import { S3Client, ListObjectsV2Command, DeleteObjectsCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { config } from '@/lib/config';
+import { Readable } from 'stream';
 
 export interface BackupFile {
   key: string;
@@ -7,7 +8,6 @@ export interface BackupFile {
   sizeMb: number;
   lastModified: Date;
 }
-
 
 class StorageService {
   private client: S3Client;
@@ -128,6 +128,28 @@ class StorageService {
       console.error("Prune failed:", e);
       throw new Error("Failed to prune backups");
     }
+  }
+
+  /**
+   * Retrieves a backup file from S3 as a readable stream.
+   * 
+   * @param key - The S3 object key of the backup file to retrieve
+   * @returns A readable stream of the backup file contents
+   * @throws {Error} If the backup file is empty or not found
+   */
+  async getBackupStream(key: string): Promise<Readable> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+
+    const response = await this.client.send(command);
+
+    if (!response.Body) {
+      throw new Error("Backup file is empty or not found");
+    }
+
+    return response.Body as Readable;
   }
 }
 
