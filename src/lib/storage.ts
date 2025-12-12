@@ -8,6 +8,7 @@ export interface BackupFile {
   lastModified: Date;
 }
 
+
 class StorageService {
   private client: S3Client;
   private bucket: string;
@@ -86,6 +87,46 @@ class StorageService {
     } catch (error) {
       console.error(`Failed to delete S3 backups for ${name}:`, error);
       // We do not throw an error here to prevent DB deletion from failing just because S3 is having issues
+    }
+  }
+
+  /**
+    * Prunes old backups for a specific database, keeping only the most recent ones.
+    * Backups are sorted by last modified date (newest first), and only the newest
+    * backups up to the `keep` limit are retained. All older backups are deleted.
+    * 
+    * @param dbName - The name of the database whose backups should be pruned
+    * @param keep - The number of most recent backups to keep (default: 5)
+    * @returns The number of backups that were deleted
+    * @throws {Error} If the deletion operation fails
+  */
+  async pruneBackups(dbName: string, keep: number = 5): Promise<number> {
+    const backups = await this.listBackups(dbName);
+
+    if (backups.length <= keep) {
+      return 0; // Nothing to prune
+    }
+
+    // The list is already sorted (newest first).
+    // We take everything from index 'keep' for deletion.
+    const toDelete = backups.slice(keep);
+
+    console.log(`Pruning ${toDelete.length} old backups for ${dbName}...`);
+
+    try {
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: this.bucket,
+        Delete: {
+          Objects: toDelete.map(b => ({ Key: b.key })),
+          Quiet: true,
+        },
+      });
+
+      await this.client.send(deleteCommand);
+      return toDelete.length;
+    } catch (e) {
+      console.error("Prune failed:", e);
+      throw new Error("Failed to prune backups");
     }
   }
 }
