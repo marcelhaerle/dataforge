@@ -178,7 +178,7 @@ export async function restoreDatabase(name: string, backupKey: string) {
   const type = sts.metadata?.labels?.['dataforge.db/type'] || 'postgres';
 
   const strategy = StrategyFactory.getStrategy(type);
-  const backupStream = await storageService.getBackupStream(backupKey);
+  const backupStream = await storageService.getBackupStream(`${name}/${backupKey}`);
 
   // 1. Prepare (Kill connections)
   // Essential for Postgres to allow DROP/CREATE DATABASE operations
