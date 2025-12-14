@@ -1,3 +1,4 @@
+import { useToast } from '@/app/context/ToastContext';
 import { DatabaseInstance } from '@/lib/services/database';
 import { BackupFile } from '@/lib/storage';
 import { CloudUpload, FileText, RefreshCw, Trash2 } from 'lucide-react';
@@ -12,15 +13,17 @@ interface BackupsTabProps {
 export default function BackupsTab({ db, backups, onDeleteBackup }: BackupsTabProps) {
   const [isBackupTriggering, setIsBackupTriggering] = useState(false);
 
+  const { addToast } = useToast();
+
   const handleManualBackup = async () => {
     if (!confirm('Start manual backup to S3?')) return;
     setIsBackupTriggering(true);
     try {
       const res = await fetch(`/api/databases/${db.name}/backups`, { method: 'POST' });
       if (res.ok) {
-        alert('Backup Job started!');
+        addToast({ type: 'success', title: 'Backup Started', message: 'Backup Job started!' });
       } else {
-        alert('Failed to start backup');
+        addToast({ type: 'error', title: 'Backup Failed', message: 'Failed to start backup' });
       }
     } finally {
       setIsBackupTriggering(false);

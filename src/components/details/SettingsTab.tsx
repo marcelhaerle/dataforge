@@ -1,3 +1,4 @@
+import { useToast } from '@/app/context/ToastContext';
 import { DatabaseInstance } from '@/lib/services/database';
 import { Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -5,16 +6,19 @@ import { useRouter } from 'next/navigation';
 export default function SettingsTab({ db }: { db: DatabaseInstance }) {
   const router = useRouter();
 
+  const { addToast } = useToast();
+
   const handleDelete = async () => {
     const confirmName = prompt(`To confirm deletion, type "${db.name}":`);
     if (confirmName !== db.name) return;
 
     try {
       await fetch(`/api/databases/${db.name}`, { method: 'DELETE' });
+      addToast({ type: 'success', title: 'Deleted', message: 'Database deleted successfully' });
       router.push('/');
     } catch (e) {
       console.error(e);
-      alert('Delete failed');
+      addToast({ type: 'error', title: 'Delete Failed', message: 'Error deleting database' });
     }
   };
 

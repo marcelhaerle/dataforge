@@ -1,5 +1,6 @@
 'use client';
 
+import { useToast } from '@/app/context/ToastContext';
 import { CreateDatabaseRequest } from '@/lib/k8s/manager';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -17,6 +18,8 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
     dbName: '',
   });
 
+  const { addToast } = useToast();
+
   const createDatabase = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -29,12 +32,25 @@ export default function DBCreateModal({ onClose }: DBCreateModalProps) {
       if (res.ok) {
         onClose();
         setFormData({ name: '', type: 'postgres', version: '16', dbName: '' }); // Reset
+        addToast({
+          type: 'success',
+          title: 'Database Created',
+          message: 'Database created successfully',
+        });
       } else {
-        alert('Fehler beim Erstellen (Name schon vergeben?)');
+        addToast({
+          type: 'error',
+          title: 'Create Failed',
+          message: 'Error creating database (name might be taken?)',
+        });
       }
     } catch (error) {
       console.error(error);
-      alert('API Error');
+      addToast({
+        type: 'error',
+        title: 'API Error',
+        message: 'An error occurred while creating the database',
+      });
     } finally {
       setIsSubmitting(false);
     }

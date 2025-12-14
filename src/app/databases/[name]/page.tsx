@@ -12,9 +12,12 @@ import OverviewTab from '@/components/details/OverviewTab';
 import BackupsTab from '@/components/details/BackupsTab';
 import LogsTab from '@/components/details/LogsTab';
 import SettingsTab from '@/components/details/SettingsTab';
+import { useToast } from '@/app/context/ToastContext';
 
 export default function DatabaseDetailPage() {
   const params = useParams();
+
+  const { addToast } = useToast();
 
   const dbName = params.name as string;
 
@@ -60,11 +63,15 @@ export default function DatabaseDetailPage() {
       if (res.ok) {
         fetchData();
       } else {
-        alert('Failed to delete backup');
+        addToast({ type: 'error', title: 'Delete Failed', message: 'Failed to delete backup' });
       }
     } catch (error) {
       console.error('Error deleting backup:', error);
-      alert('An error occurred while deleting the backup');
+      addToast({
+        type: 'error',
+        title: 'Delete Failed',
+        message: 'An error occurred while deleting the backup',
+      });
     }
   };
 
