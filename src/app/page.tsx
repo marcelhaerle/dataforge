@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Server, RefreshCw, Plus, HardDrive } from 'lucide-react';
 import { DatabaseInstance } from '@/lib/k8s/manager';
 import DatabasePanel from '@/components/DatabasePanel';
@@ -16,7 +16,7 @@ export default function Dashboard() {
     fetchDatabases();
   };
 
-  const fetchDatabases = async () => {
+  const fetchDatabases = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/databases');
@@ -27,12 +27,15 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Initial Fetch
   useEffect(() => {
     fetchDatabases();
-  }, []);
+
+    const interval = setInterval(fetchDatabases, 15000);
+    return () => clearInterval(interval);
+  }, [fetchDatabases]);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
