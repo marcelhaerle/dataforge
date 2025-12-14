@@ -20,11 +20,34 @@ const envSchema = z.object({
   PASSWORD_LENGTH: z.coerce.number().default(16),
 });
 
-const _env = envSchema.safeParse(process.env);
+const isBuildPhase =
+  process.env.SKIP_ENV_VALIDATION === 'true' || process.env.NEXT_PHASE === 'phase-production-build';
 
-if (!_env.success) {
-  console.error('Invalid environment variables:', z.treeifyError(_env.error));
-  throw new Error('Invalid environment variables');
+let parsedConfig;
+
+if (isBuildPhase) {
+  // Mock config for the build phase to prevent import crashes
+  console.log('Skipping env validation during build phase');
+  parsedConfig = {
+    NODE_ENV: 'production',
+    NAMESPACE: 'mock-ns',
+    S3_ENDPOINT: 'http://localhost',
+    S3_ACCESS_KEY: 'mock',
+    S3_SECRET_KEY: 'mock',
+    S3_BUCKET: 'mock',
+    S3_REGION: 'mock',
+    PASSWORD_LENGTH: 16,
+  };
+} else {
+  // Real validation at runtime
+  const _env = envSchema.safeParse(process.env);
+
+  if (!_env.success) {
+    console.error('Invalid environment variables:', z.treeifyError(_env.error));
+    throw new Error('Invalid environment variables');
+  }
+
+  parsedConfig = _env.data;
 }
 
-export const config = _env.data;
+export const config = parsedConfig as z.infer<typeof envSchema>;

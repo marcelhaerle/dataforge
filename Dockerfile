@@ -25,6 +25,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
+ENV SKIP_ENV_VALIDATION="true"
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # Create user for security
