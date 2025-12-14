@@ -49,6 +49,10 @@ DataForge follows the Controller Pattern, but simplifies it by integrating the c
 3. A default StorageClass for PVCs.
 4. An S3-compatible object storage (e.g., MinIO or AWS S3) for backups.
 
+### Installation (Helm / K8s)
+
+_Coming soon with V1.0 release!_
+
 ### Local Development
 
 #### 1. Clone the repository
@@ -90,6 +94,23 @@ npm run dev
 ```
 
 Open http://localhost:3000 in your browser.
+
+## Release Process & Versioning
+
+DataForge follows [Semantic Versioning](https://semver.org/).
+
+### Branching Strategy
+
+- `main`: The stable branch. Contains the latest released code.
+- `feat/xyz`: Feature branches for development. Open PRs against `main`.
+
+### Creating a Release (For Maintainers)
+
+1. **Update Version**: Bump the version in `package.json` and `charts/dataforge/Chart.yaml` (appVersion & version).
+2. **Commit**: `git commit -am "chore: release v1.0.0"`
+3. **Tag**: `git tag v1.0.0`
+
+The CI pipeline will automatically build and push the Docker image with the tag `v1.0.0` and `latest`.
 
 ## Contributing
 
