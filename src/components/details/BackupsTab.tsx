@@ -14,6 +14,8 @@ interface BackupsTabProps {
 export default function BackupsTab({ db, backups, onDeleteBackup }: BackupsTabProps) {
   const [isBackupTriggering, setIsBackupTriggering] = useState(false);
   const [showBackupConfirm, setShowBackupConfirm] = useState(false);
+  const [showConfirmRestore, setShowConfirmRestore] = useState(false);
+  const [selectedBackupFile, setSelectedBackupFile] = useState<string | null>(null);
 
   const { addToast } = useToast();
 
@@ -33,6 +35,28 @@ export default function BackupsTab({ db, backups, onDeleteBackup }: BackupsTabPr
     }
   };
 
+  const handleStartRestore = (backupfile: string) => {
+    setSelectedBackupFile(backupfile);
+    setShowConfirmRestore(true);
+  };
+
+  const handleRestore = async () => {
+    setShowConfirmRestore(false);
+    try {
+      const res = await fetch(`/api/databases/${db.name}/backups/${selectedBackupFile}`, {
+        method: 'PUT',
+      });
+      if (res.ok) {
+        addToast({ type: 'success', title: 'Restore Started', message: 'Restore Job started!' });
+      } else {
+        addToast({ type: 'error', title: 'Restore Failed', message: 'Failed to start restore' });
+      }
+    } catch (error) {
+      console.error('Restore error:', error);
+      addToast({ type: 'error', title: 'Restore Failed', message: 'Failed to start restore' });
+    }
+  };
+
   return (
     <>
       <ConfirmModal
@@ -42,6 +66,16 @@ export default function BackupsTab({ db, backups, onDeleteBackup }: BackupsTabPr
         title="Start Manual Backup?"
         message={`Do you really want to trigger an immediate backup for "${db.name}" to S3 storage?`}
         confirmText="Yes, start backup"
+        variant="info"
+      />
+
+      <ConfirmModal
+        isOpen={showConfirmRestore}
+        onClose={() => setShowConfirmRestore(false)}
+        onConfirm={() => handleRestore(/* pass the backupfile here */)}
+        title="Start Database Restore?"
+        message={`Do you really want to trigger an immediate restore for "${db.name}" from this backup? This will overwrite the current database contents.`}
+        confirmText="Yes, start restore"
         variant="info"
       />
 
@@ -94,7 +128,10 @@ export default function BackupsTab({ db, backups, onDeleteBackup }: BackupsTabPr
                       {new Date(bk.lastModified).toLocaleString()}
                     </td>
                     <td className="px-6 py-3 text-right">
-                      <button className="text-indigo-600 hover:underline text-xs font-medium mr-3">
+                      <button
+                        className="text-indigo-600 hover:underline text-xs font-medium mr-3"
+                        onClick={() => handleStartRestore(bk.filename)}
+                      >
                         Restore
                       </button>
                       <button
