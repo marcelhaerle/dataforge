@@ -16,6 +16,7 @@ It bridges the gap between complex operators (like KubeDB) and manual Helm chart
 - Secure by Default: Generates strong credentials and isolates instances via namespaced secrets.
 - Modern Stack: Single-container architecture built with Next.js 14+ and TypeScript.
 - Live Log: Stream real-time container logs directly in the browser to debug database issues without SSH access.
+- Restore UI: Restore backups directly from the dashboard (Point-in-Time Recovery).
 
 ## Roadmap
 
@@ -23,7 +24,6 @@ We are actively working on expanding the platform. Planned features include:
 
 - [ ] **MySQL / MariaDB Support:** Full support for the LAMP stack favorite.
 - [ ] **MongoDB Support:** NoSQL document store provisioning.
-- [ ] **Restore UI:** Restore backups directly from the dashboard (Point-in-Time Recovery).
 - [ ] **Database Cloning:** One-click cloning of production databases to development environments.
 - [ ] **Scale-to-Zero (Sleep Mode):** Automatically pause unused databases to save cluster resources.
 - [ ] **Embedded Admin Tools:** Integrated Web-UI for SQL (Adminer) and Redis (Redis Commander).
