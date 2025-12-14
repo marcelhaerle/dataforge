@@ -50,6 +50,24 @@ export default function DatabaseDetailPage() {
     fetchData();
   }, [fetchData]);
 
+  const handleDeleteBackup = async (backupFile: string) => {
+    if (!db) return;
+
+    try {
+      const res = await fetch(`/api/databases/${db.name}/backups/${backupFile}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        alert('Failed to delete backup');
+      }
+    } catch (error) {
+      console.error('Error deleting backup:', error);
+      alert('An error occurred while deleting the backup');
+    }
+  }
+
   if (loading)
     return (
       <div className="h-screen bg-slate-50 p-10 flex justify-center">
@@ -104,10 +122,9 @@ export default function DatabaseDetailPage() {
                 key={tab}
                 onClick={() => setActiveTab(tab as string)}
                 className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors capitalize
-                  ${
-                    activeTab === tab
-                      ? 'border-indigo-600 text-indigo-600'
-                      : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                  ${activeTab === tab
+                    ? 'border-indigo-600 text-indigo-600'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
                   }`}
               >
                 {tab}
@@ -120,7 +137,7 @@ export default function DatabaseDetailPage() {
       {/* Content */}
       <div className="max-w-5xl mx-auto p-8">
         {activeTab === 'overview' && <OverviewTab db={db} />}
-        {activeTab === 'backups' && <BackupsTab db={db} backups={backups} />}
+        {activeTab === 'backups' && <BackupsTab db={db} backups={backups} onDeleteBackup={handleDeleteBackup} />}
         {activeTab === 'logs' && <LogsTab db={db} />}
         {activeTab === 'settings' && <SettingsTab db={db} />}
       </div>

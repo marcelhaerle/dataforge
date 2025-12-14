@@ -152,6 +152,33 @@ class StorageService {
 
     return response.Body as Readable;
   }
+
+  /**
+   * Deletes a specific backup file from S3 storage.
+   *
+   * @param dbName - The name of the database that owns the backup
+   * @param backupFile - The filename of the backup to delete (without the database prefix)
+   * @returns A promise that resolves when the backup is successfully deleted
+   * @throws {Error} If the deletion operation fails
+   */
+  async deleteBackup(dbName: string, backupFile: string): Promise<void> {
+    try {
+      const command = new DeleteObjectsCommand({
+        Bucket: this.bucket,
+        Delete: {
+          Objects: [{ Key: `${dbName}/${backupFile}` }],
+          Quiet: true,
+        },
+      });
+
+      await this.client.send(command);
+
+      console.log(`Deleted backup ${backupFile} for ${dbName}`);
+    } catch (error) {
+      console.error(`Failed to delete backup ${backupFile} for ${dbName}:`, error);
+      throw new Error('Failed to delete backup');
+    }
+  }
 }
 
 export const storageService = new StorageService();
