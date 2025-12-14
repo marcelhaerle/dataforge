@@ -80,7 +80,10 @@ export default function BackupsTab({ db, backups, onDeleteBackup }: BackupsTabPr
                     <button className="text-indigo-600 hover:underline text-xs font-medium mr-3">
                       Restore
                     </button>
-                    <button className="text-slate-400 hover:text-red-600" onClick={() => onDeleteBackup(bk.filename)}>
+                    <button
+                      className="text-slate-400 hover:text-red-600"
+                      onClick={() => onDeleteBackup(bk.filename)}
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </td>

@@ -1,5 +1,5 @@
-import { storageService } from "@/lib/storage";
-import { NextRequest, NextResponse } from "next/server";
+import { storageService } from '@/lib/storage';
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function DELETE(
   request: NextRequest,
