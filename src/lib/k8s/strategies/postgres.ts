@@ -111,7 +111,7 @@ export class PostgresStrategy implements DatabaseStrategy {
   }
 
   createDumpCommand(): string[] {
-    return ['/bin/sh', '-c', `pg_dump -h localhost -U $DB_USER $DB_NAME`];
+    return ['/bin/sh', '-c', `pg_dump -h localhost -U $POSTGRES_USER $POSTGRES_DB`];
   }
 
   createPreRestoreCommand(): string[] {
@@ -123,6 +123,6 @@ export class PostgresStrategy implements DatabaseStrategy {
   }
 
   createRestoreCommand(): string[] {
-    return ['/bin/sh', '-c', 'psql -h localhost -U $DB_USER -d $DB_NAME'];
+    return ['/bin/sh', '-c', 'psql -h localhost -U $POSTGRES_USER -d $POSTGRES_DB'];
   }
 }
