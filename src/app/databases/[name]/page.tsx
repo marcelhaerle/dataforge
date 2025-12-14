@@ -51,6 +51,9 @@ export default function DatabaseDetailPage() {
 
   useEffect(() => {
     fetchData();
+
+    const interval = setInterval(fetchData, 15000);
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   const handleDeleteBackup = async (backupFile: string) => {
@@ -75,7 +78,7 @@ export default function DatabaseDetailPage() {
     }
   };
 
-  if (loading)
+  if (!db && loading)
     return (
       <div className="h-screen bg-slate-50 p-10 flex justify-center">
         <div className="m-auto">
