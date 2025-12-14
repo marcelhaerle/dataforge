@@ -32,6 +32,9 @@ export default function Dashboard() {
   // Initial Fetch
   useEffect(() => {
     fetchDatabases();
+
+    const interval = setInterval(fetchDatabases, 15000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
