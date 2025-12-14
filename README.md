@@ -15,6 +15,7 @@ It bridges the gap between complex operators (like KubeDB) and manual Helm chart
 - Observability: Real-time health checks via Readiness Probes and live status updates.
 - Secure by Default: Generates strong credentials and isolates instances via namespaced secrets.
 - Modern Stack: Single-container architecture built with Next.js 14+ and TypeScript.
+- Live Log: Stream real-time container logs directly in the browser to debug database issues without SSH access.
 
 ## Roadmap
 
